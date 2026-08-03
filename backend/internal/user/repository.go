@@ -113,3 +113,13 @@ func (r *Repository) ListAllAdmin(limit, offset int) ([]UserAdminView, int64, er
 	}
 	return out, total, nil
 }
+
+// GetWalletAddress 查询用户绑定钱包地址
+func (r *Repository) GetWalletAddress(id uuid.UUID) (string, error) {
+	var addr string
+	err := r.db.QueryRow(`SELECT wallet_address FROM users WHERE id = $1`, id).Scan(&addr)
+	if err != nil {
+		return "", fmt.Errorf("get wallet address: %w", err)
+	}
+	return addr, nil
+}

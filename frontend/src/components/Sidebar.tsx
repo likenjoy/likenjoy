@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Layout, Menu } from "antd";
 import WalletButton from "@/components/WalletButton";
 import {
+  WalletOutlined,
   DashboardOutlined,
   GoldOutlined,
   SwapOutlined,
@@ -18,6 +19,7 @@ const { Sider } = Layout;
 
 const menuItems = [
   { key: "/dashboard", icon: <DashboardOutlined />, label: "仪表盘" },
+  { key: "/portfolio", icon: <WalletOutlined />, label: "我的持仓" },
   { key: "/assets", icon: <GoldOutlined />, label: "资产发行" },
   { key: "/disclosure", icon: <FileTextOutlined />, label: "募集公示" },
   { key: "/trade", icon: <SwapOutlined />, label: "私募交易" },

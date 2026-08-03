@@ -11,6 +11,7 @@ import (
 
 	"rwa-exchange/internal/blockchain"
 	"rwa-exchange/internal/revenue"
+	"rwa-exchange/internal/user"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,7 @@ type Handler struct {
 	tokenOp    *blockchain.TokenOperator
 	tokenAddr  common.Address
 	revenueSvc *revenue.Service
+	userRepo   *user.Repository
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -35,6 +37,10 @@ func (h *Handler) SetBlockchain(tokenOp *blockchain.TokenOperator, tokenAddr com
 
 func (h *Handler) SetRevenue(svc *revenue.Service) {
 	h.revenueSvc = svc
+}
+
+func (h *Handler) SetUserRepo(r *user.Repository) {
+	h.userRepo = r
 }
 
 type createAssetReq struct {
@@ -110,6 +116,71 @@ func (h *Handler) CreateAsset(c *gin.Context) {
 		"mint_result":      mintResult,
 		"created_at":       asset.CreatedAt,
 	})
+}
+
+// GET /api/portfolio 投资者持仓（绑定钱包的链上余额）
+func (h *Handler) ListPortfolio(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, ok := userID.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad user id"})
+		return
+	}
+	if h.tokenOp == nil {
+		c.JSON(http.StatusOK, gin.H{"wallet": "", "positions": []interface{}{}, "total_value": "0"})
+		return
+	}
+
+	// 查用户绑定钱包
+	walletAddr, err := h.getUserWallet(uid)
+	if err != nil || walletAddr == "" {
+		c.JSON(http.StatusOK, gin.H{"wallet": walletAddr, "positions": []interface{}{}, "total_value": "0", "note": "未绑定钱包"})
+		return
+	}
+	investor := common.HexToAddress(walletAddr)
+
+	// 链上总余额（单代币部署模型：一个 RWAToken 承载所有资产，按 assetId 区分）
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	bal, err := h.tokenOp.BalanceOf(ctx, h.tokenAddr, investor)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "balance query failed: " + err.Error()})
+		return
+	}
+	decimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	human := new(big.Int).Div(bal, decimals)
+
+	// 资产清单（供前端展示可投资/持有的资产）
+	assets, _, err := h.svc.ListLiveAssets(100, 0)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	type assetInfo struct {
+		AssetID      string `json:"asset_id"`
+		Symbol       string `json:"symbol"`
+		Name         string `json:"name"`
+		PricePerUnit string `json:"price_per_unit"`
+	}
+	assetList := []assetInfo{}
+	for _, a := range assets {
+		assetList = append(assetList, assetInfo{AssetID: a.ID.String(), Symbol: a.Symbol, Name: a.Name, PricePerUnit: a.PricePerUnit})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"wallet":       walletAddr,
+		"balance":      human.String(),
+		"balance_wei":  bal.String(),
+		"assets":       assetList,
+		"token_symbol": "RVGOLD",
+		"note":         "单代币模型：链上余额按代币总量计，价值需按具体资产单价估算",
+	})
+}
+
+// getUserWallet 查用户绑定钱包（复用 user repo）
+func (h *Handler) getUserWallet(userID uuid.UUID) (string, error) {
+	// 通过用户模块查询
+	return h.userRepo.GetWalletAddress(userID)
 }
 
 // recordMintRevenue 记录铸造费收入与 gas 成本（合规审计）

@@ -194,6 +194,7 @@ func main() {
 		tokenAddr := common.HexToAddress(contracts.RWAToken)
 		assetHandler.SetBlockchain(tokenOp, tokenAddr)
 		assetHandler.SetRevenue(revenueSvc)
+		assetHandler.SetUserRepo(userRepo)
 		log.Println("Blockchain operator injected into asset handler")
 	}
 
@@ -216,6 +217,7 @@ func main() {
 	protected := api.Group("")
 	protected.Use(authMW)
 	{
+		protected.GET("/portfolio", assetHandler.ListPortfolio)
 		protected.GET("/fees", revenueHandler.GetFees)
 		protected.POST("/auth/bind-wallet", userHandler.BindWallet)
 

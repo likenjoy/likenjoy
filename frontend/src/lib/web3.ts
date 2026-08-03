@@ -1,12 +1,14 @@
-import { http, createConfig } from "wagmi";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { hardhat } from "wagmi/chains";
 
-// wagmi 配置：本地 Hardhat 开发链（上线时换 RPC + 主网/测试网链）
-export const wagmiConfig = createConfig({
+// WalletConnect 项目 ID：用于手机钱包扫码登录
+// 注册（免费）：https://cloud.walletconnect.com → 创建项目 → 复制 Project ID 填入环境变量
+const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID || "00000000000000000000000000000000";
+
+export const wagmiConfig = getDefaultConfig({
+  appName: "RealVest RWA Exchange",
+  projectId,
   chains: [hardhat],
-  transports: {
-    [hardhat.id]: http("http://localhost:8545"),
-  },
   ssr: true,
 });
 

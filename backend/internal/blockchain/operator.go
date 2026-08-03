@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -37,6 +38,20 @@ func (op *TokenOperator) Mint(ctx context.Context, tokenAddr, to common.Address,
 		return nil, fmt.Errorf("pack mint: %w", err)
 	}
 	return op.sendTransaction(ctx, tokenAddr, data)
+}
+
+// BalanceOf 查询账户代币余额（wei）
+func (op *TokenOperator) BalanceOf(ctx context.Context, tokenAddr, account common.Address) (*big.Int, error) {
+	abi := TokenABI()
+	data, err := abi.Pack("balanceOf", account)
+	if err != nil {
+		return nil, fmt.Errorf("pack balanceOf: %w", err)
+	}
+	out, err := op.client.ETHClient().CallContract(ctx, ethereum.CallMsg{To: &tokenAddr, Data: data}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("call balanceOf: %w", err)
+	}
+	return new(big.Int).SetBytes(out), nil
 }
 
 // Burn 销毁代币（赎回）
