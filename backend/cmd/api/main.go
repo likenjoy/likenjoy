@@ -228,14 +228,14 @@ func main() {
 
 		// /assets (list all) must be before /assets/:id to avoid route conflict
 		protected.GET("/assets", assetHandler.ListAllAssets)
-		protected.POST("/assets", assetHandler.CreateAsset)
+		protected.POST("/assets", middleware.RoleMiddleware("issuer", "admin"), assetHandler.CreateAsset)
 		protected.GET("/assets/live", assetHandler.ListLiveAssets)
 		protected.GET("/assets/issuer", assetHandler.ListIssuerAssets)
 		protected.GET("/assets/:id", assetHandler.GetAsset)
-		protected.POST("/assets/:id/submit", assetHandler.SubmitForReview)
-		protected.POST("/assets/:id/start-issuance", assetHandler.StartIssuance)
-		protected.POST("/assets/:id/go-live", assetHandler.GoLive)
-		protected.POST("/assets/:id/documents", assetHandler.AddDocument)
+		protected.POST("/assets/:id/submit", middleware.RoleMiddleware("issuer", "admin"), assetHandler.SubmitForReview)
+		protected.POST("/assets/:id/start-issuance", middleware.RoleMiddleware("issuer", "admin"), assetHandler.StartIssuance)
+		protected.POST("/assets/:id/go-live", middleware.RoleMiddleware("issuer", "admin"), assetHandler.GoLive)
+		protected.POST("/assets/:id/documents", middleware.RoleMiddleware("issuer", "admin"), assetHandler.AddDocument)
 		protected.GET("/assets/:id/rounds", assetHandler.GetRounds)
 
 		protected.POST("/trades/orders", tradeHandler.PlaceOrder)
@@ -245,7 +245,7 @@ func main() {
 		protected.GET("/trades/asset/:id", tradeHandler.ListAssetTrades)
 		protected.GET("/trades/history", tradeHandler.ListUserTrades)
 
-		protected.POST("/assets/:id/dividends/plans", dividendHandler.CreatePlan)
+		protected.POST("/assets/:id/dividends/plans", middleware.RoleMiddleware("issuer", "admin"), dividendHandler.CreatePlan)
 		protected.GET("/assets/:id/dividends/plans", dividendHandler.GetPlansByAsset)
 		protected.GET("/dividends/plans/:plan_id", dividendHandler.GetPlan)
 		protected.POST("/dividends/plans/:plan_id/pay", dividendHandler.PayDividend)
