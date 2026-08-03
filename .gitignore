@@ -26,6 +26,11 @@ npm-debug.log*
 backend/bin/
 *.test
 
+# Hardhat 编译产物（每次编译都会变化，不入库）
+contracts/erc3643/artifacts/
+contracts/erc3643/cache/
+contracts/erc3643/typechain-types/
+
 # 系统
 .DS_Store
 Thumbs.db
