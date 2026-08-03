@@ -106,7 +106,7 @@ export default function AssetsPage() {
       <Card>
         <Table dataSource={assets} columns={columns} rowKey="id" loading={loading} />
       </Card>
-      <Modal title="发行新资产" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnClose>
+      <Modal title="发行新资产" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="name" label="资产名称" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="symbol" label="资产代码" rules={[{ required: true }]}><Input /></Form.Item>

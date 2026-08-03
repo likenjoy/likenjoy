@@ -110,7 +110,7 @@ export default function RedeemPage() {
       <Card>
         <Table dataSource={requests} columns={columns} rowKey="id" loading={loading} />
       </Card>
-      <Modal title="提交赎回申请" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnClose>
+      <Modal title="提交赎回申请" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="asset_id" label="选择资产" rules={[{ required: true }]}>
             <Select options={assets.map((a) => ({ value: a.id, label: `${a.name} ($${a.price_per_unit})` }))} />

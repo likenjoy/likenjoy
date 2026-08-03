@@ -104,7 +104,7 @@ export default function TradePage() {
       <Card>
         <Table dataSource={trades} columns={columns} rowKey="id" loading={loading} />
       </Card>
-      <Modal title="新建交易订单" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnClose>
+      <Modal title="新建交易订单" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="asset_id" label="选择资产" rules={[{ required: true }]}>
             <Select options={assets.map((a) => ({ value: a.id, label: `${a.name} ($${a.price_per_unit})` }))} />

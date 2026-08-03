@@ -127,7 +127,7 @@ export default function DividendPage() {
       <Card>
         <Table dataSource={plans} columns={columns} rowKey="id" loading={loading} />
       </Card>
-      <Modal title="创建分红计划" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnClose>
+      <Modal title="创建分红计划" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="name" label="计划名称" rules={[{ required: true }]}><Select options={[
             { value: "月度分红", label: "月度分红" },
