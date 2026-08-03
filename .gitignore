@@ -1,0 +1,31 @@
+# 密钥与配置（禁止提交）
+.env
+*.pem
+*.key
+
+# 数据库与日志
+*.db
+*.db-journal
+*.log
+data/
+
+# 构建产物
+backend/*.exe
+backend/*.exe~
+backend/api.exe*
+backend/server.exe*
+backend/rwa-server.exe*
+
+# Node
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# Go
+backend/bin/
+*.test
+
+# 系统
+.DS_Store
+Thumbs.db

@@ -1,0 +1,27 @@
+
+
+  ERC-3643 RealVest Contracts
+    IdentityRegistry
+      √ should register an investor identity
+      √ should not allow duplicate registration
+      √ should update identity
+      √ should remove identity
+    ComplianceModule
+      √ should add investor to whitelist
+      √ should reject unverified investor from whitelist
+      √ should allow transfer for whitelisted investor
+      √ should reject transfer for non-whitelisted investor
+    RWAToken
+      √ should have correct metadata
+      √ should mint tokens to whitelisted investor
+      √ should reject mint to non-whitelisted address
+      √ should transfer between whitelisted investors
+      √ should burn tokens
+      √ should execute forced transfer
+      √ should update NAV
+      √ should manage agents
+      √ should reject non-agent mint
+
+
+  17 passing (417ms)
+
