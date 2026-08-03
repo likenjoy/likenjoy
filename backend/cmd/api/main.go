@@ -158,6 +158,16 @@ func main() {
 	kycSvc.SetSanctions(compliance.NewSanctionsChecker("")) // 生产可传 OFAC 名单文件路径
 	kycHandler := kyc.NewHandler(kycSvc)
 
+	// 链上身份/白名单操作器（KYC 通过后自动注册投资者）
+	if bcClient != nil && contracts != nil {
+		identityOp := blockchain.NewIdentityOperator(bcClient)
+		complianceOp := blockchain.NewComplianceOperator(bcClient)
+		kycSvc.SetOnChainOps(identityOp, complianceOp,
+			common.HexToAddress(contracts.IdentityRegistry),
+			common.HexToAddress(contracts.ComplianceModule))
+		log.Println("On-chain KYC operators injected (identity + whitelist)")
+	}
+
 	assetRepo := asset.NewRepository(db)
 	assetSvc := asset.NewService(assetRepo)
 	assetHandler := asset.NewHandler(assetSvc)

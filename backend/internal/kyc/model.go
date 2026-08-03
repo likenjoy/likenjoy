@@ -31,6 +31,7 @@ type KYCDocument struct {
 type KYCSubmission struct {
 	ID          uuid.UUID  `json:"id"`
 	UserID      uuid.UUID  `json:"user_id"`
+	Country     string     `json:"country"`
 	Status      KYCStatus  `json:"status"`
 	SubmittedAt time.Time  `json:"submitted_at"`
 	ReviewedAt  *time.Time `json:"reviewed_at,omitempty"`

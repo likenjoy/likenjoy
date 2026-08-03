@@ -41,6 +41,7 @@ func MigrateSQLite(db *sql.DB) error {
 		`CREATE TABLE IF NOT EXISTS kyc_submissions (
 			id TEXT PRIMARY KEY,
 			user_id TEXT NOT NULL,
+			country TEXT DEFAULT '',
 			status TEXT NOT NULL DEFAULT 'not_submitted',
 			submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			reviewed_at DATETIME,
@@ -323,6 +324,25 @@ func MigrateSQLite(db *sql.DB) error {
 		if !found {
 			if _, e := db.Exec(`ALTER TABLE users ADD COLUMN wallet_address TEXT DEFAULT ''`); e != nil {
 				log.Printf("WARNING: add wallet_address column: %v", e)
+			}
+		}
+		// 兼容旧库：kyc_submissions 补充 country 列
+		if rows2, e2 := db.Query(`PRAGMA table_info(kyc_submissions)`); e2 == nil {
+			hasCountry := false
+			for rows2.Next() {
+				var cid int
+				var name, ctype string
+				var notnull, pk int
+				var dflt interface{}
+				if rows2.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk) == nil && name == "country" {
+					hasCountry = true
+				}
+			}
+			rows2.Close()
+			if !hasCountry {
+				if _, e3 := db.Exec(`ALTER TABLE kyc_submissions ADD COLUMN country TEXT DEFAULT ''`); e3 != nil {
+					log.Printf("WARNING: add kyc country column: %v", e3)
+				}
 			}
 		}
 	}

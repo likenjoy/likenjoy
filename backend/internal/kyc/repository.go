@@ -21,9 +21,9 @@ func (r *Repository) CreateSubmission(s *KYCSubmission) error {
 	s.SubmittedAt = time.Now()
 	s.Status = StatusPending
 	_, err := r.db.Exec(
-		`INSERT INTO kyc_submissions (id, user_id, status, submitted_at)
-		 VALUES ($1, $2, $3, $4)`,
-		s.ID, s.UserID, s.Status, s.SubmittedAt,
+		`INSERT INTO kyc_submissions (id, user_id, country, status, submitted_at)
+		 VALUES ($1, $2, $3, $4, $5)`,
+		s.ID, s.UserID, s.Country, s.Status, s.SubmittedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("create kyc submission: %w", err)
@@ -34,10 +34,10 @@ func (r *Repository) CreateSubmission(s *KYCSubmission) error {
 func (r *Repository) FindSubmissionByUser(userID uuid.UUID) (*KYCSubmission, error) {
 	s := &KYCSubmission{}
 	err := r.db.QueryRow(
-		`SELECT id, user_id, status, submitted_at, reviewed_at, reviewed_by, reject_reason
+		`SELECT id, user_id, country, status, submitted_at, reviewed_at, reviewed_by, reject_reason
 		 FROM kyc_submissions WHERE user_id = $1 ORDER BY submitted_at DESC LIMIT 1`,
 		userID,
-	).Scan(&s.ID, &s.UserID, &s.Status, &s.SubmittedAt, &s.ReviewedAt, &s.ReviewedBy, &s.RejectReason)
+	).Scan(&s.ID, &s.UserID, &s.Country, &s.Status, &s.SubmittedAt, &s.ReviewedAt, &s.ReviewedBy, &s.RejectReason)
 	if err != nil {
 		return nil, fmt.Errorf("find kyc submission: %w", err)
 	}
@@ -127,4 +127,27 @@ func (r *Repository) ListPending() ([]map[string]interface{}, error) {
 		})
 	}
 	return out, nil
+}
+
+// GetUserWallet 查询用户绑定的钱包地址
+func (r *Repository) GetUserWallet(userID uuid.UUID) (string, error) {
+	var addr string
+	err := r.db.QueryRow(`SELECT wallet_address FROM users WHERE id = $1`, userID).Scan(&addr)
+	if err != nil {
+		return "", fmt.Errorf("get user wallet: %w", err)
+	}
+	return addr, nil
+}
+
+// FindByID 按提交 ID 查询（含 user_id / country）
+func (r *Repository) FindByID(id uuid.UUID) (*KYCSubmission, error) {
+	sub := &KYCSubmission{}
+	err := r.db.QueryRow(
+		`SELECT id, user_id, country, status, submitted_at, reviewed_at, reviewed_by, reject_reason
+		 FROM kyc_submissions WHERE id = $1`, id,
+	).Scan(&sub.ID, &sub.UserID, &sub.Country, &sub.Status, &sub.SubmittedAt, &sub.ReviewedAt, &sub.ReviewedBy, &sub.RejectReason)
+	if err != nil {
+		return nil, fmt.Errorf("find kyc by id: %w", err)
+	}
+	return sub, nil
 }

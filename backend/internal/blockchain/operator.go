@@ -90,6 +90,11 @@ func NewIdentityOperator(client *Client) *IdentityOperator {
 }
 
 // RegisterIdentity 注册链上身份
+// Client 返回底层区块链客户端
+func (op *IdentityOperator) Client() *Client {
+	return op.client
+}
+
 func (op *IdentityOperator) RegisterIdentity(ctx context.Context, registryAddr, investor common.Address, identityHash [32]byte, countryCode uint16) (*types.Transaction, error) {
 	abi := IdentityABI()
 	data, err := abi.Pack("registerIdentity", investor, identityHash, countryCode)
@@ -120,6 +125,11 @@ func NewComplianceOperator(client *Client) *ComplianceOperator {
 }
 
 // AddToWhitelist 添加白名单
+// Client 返回底层区块链客户端
+func (op *ComplianceOperator) Client() *Client {
+	return op.client
+}
+
 func (op *ComplianceOperator) AddToWhitelist(ctx context.Context, complianceAddr, investor common.Address, maxHold *big.Int, lockupEnd uint64) (*types.Transaction, error) {
 	abi := ComplianceABI()
 	data, err := abi.Pack("addToWhitelist", investor, maxHold, big.NewInt(int64(lockupEnd)))
