@@ -193,10 +193,17 @@ func (op *ComplianceOperator) RemoveFromWhitelist(ctx context.Context, complianc
 }
 
 // sendTransaction 发送交易（通用）
+// 安全要点：
+//  1. 全局互斥锁串行化发送（nonce 竞态防护，见 Client.txMu）
+//  2. gas 用 EstimateGas 估算 + 30% 缓冲，避免固定 300000 在复杂转账下 out of gas
+//  3. 等待 1 个区块确认后返回（防 RPC 层交易丢失；生产可提高确认数）
 func (op *TokenOperator) sendTransaction(ctx context.Context, contractAddr common.Address, data []byte) (*types.Transaction, error) {
 	eth := op.client.ETHClient()
 	signer := op.client.Signer()
 	chainID := op.client.ChainID()
+
+	op.client.txMu.Lock()
+	defer op.client.txMu.Unlock()
 
 	nonce, err := eth.PendingNonceAt(ctx, signer.Address())
 	if err != nil {
@@ -208,11 +215,19 @@ func (op *TokenOperator) sendTransaction(ctx context.Context, contractAddr commo
 		return nil, fmt.Errorf("get gas price: %w", err)
 	}
 
+	// 估算 gas：模拟调用 + 30% 缓冲；估算失败（如 pending 状态异常）回退默认值
+	gas := uint64(300000)
+	if est, err := eth.EstimateGas(ctx, ethereum.CallMsg{
+		From: signer.Address(), To: &contractAddr, Value: big.NewInt(0), Data: data,
+	}); err == nil && est > 0 {
+		gas = est + est/3 + 21000
+	}
+
 	tx := types.NewTx(&types.LegacyTx{
 		Nonce:    nonce,
 		To:       &contractAddr,
 		Value:    big.NewInt(0),
-		Gas:      300000,
+		Gas:      gas,
 		GasPrice: gasPrice,
 		Data:     data,
 	})
@@ -225,6 +240,15 @@ func (op *TokenOperator) sendTransaction(ctx context.Context, contractAddr commo
 	err = eth.SendTransaction(ctx, signedTx)
 	if err != nil {
 		return nil, fmt.Errorf("send tx: %w", err)
+	}
+
+	// 等待打包（非阻塞轮询），确认落块后再返回
+	receipt, err := bind.WaitMined(ctx, eth, signedTx)
+	if err != nil {
+		return signedTx, fmt.Errorf("tx sent but wait mined: %w (tx=%s)", err, signedTx.Hash().Hex())
+	}
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		return signedTx, fmt.Errorf("tx reverted (tx=%s)", signedTx.Hash().Hex())
 	}
 
 	return signedTx, nil

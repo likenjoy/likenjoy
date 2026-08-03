@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -13,9 +14,13 @@ import (
 
 // Client 区块链客户端封装
 type Client struct {
-	eth      *ethclient.Client
-	chainID  *big.Int
-	signer   *Signer
+	eth     *ethclient.Client
+	chainID *big.Int
+	signer  *Signer
+
+	// txMu 串行化所有交易发送（同一签名者 nonce 必须全局递增，
+	// 否则并发调用 PendingNonceAt 会拿到相同 nonce 导致交易互相覆盖）
+	txMu sync.Mutex
 }
 
 // Config 区块链配置

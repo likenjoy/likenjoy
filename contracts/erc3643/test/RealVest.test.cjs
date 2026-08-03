@@ -176,5 +176,80 @@ describe("ERC-3643 RealVest Contracts", function () {
         token.connect(investor1).mint(investor2.address, hre.ethers.parseEther("10"), assetId)
       ).to.be.revertedWith("RWAToken: caller is not agent");
     });
+
+    it("should reject zero NAV update", async function () {
+      await expect(token.updateNAV(0)).to.be.revertedWith("RWAToken: NAV must be positive");
+    });
+  });
+
+  describe("Security Hardening (lockup / jurisdiction / pause)", function () {
+    let investor3;
+    before(async function () {
+      [, , , , investor3] = await hre.ethers.getSigners();
+      const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("user-3-kyc-salt"));
+      await identityRegistry.registerIdentity(investor3.address, hash, 702); // 702 = SG
+    });
+
+    it("should block sender during lockup period (transfer out frozen)", async function () {
+      // investor3 白名单 + 锁定期到未来（认购后锁定）
+      const farFuture = Math.floor(Date.now() / 1000) + 86400 * 90; // 90 天
+      await complianceModule.addToWhitelist(investor3.address, hre.ethers.parseEther("1000"), farFuture);
+      await token.mint(investor3.address, hre.ethers.parseEther("100"), assetId);
+
+      // investor3 处于锁定期：不能转出（此前漏洞：锁定期仅约束接收方）
+      await expect(
+        token.connect(investor3).transfer(investor1.address, hre.ethers.parseEther("1"))
+      ).to.be.revertedWith("Sender in lockup period");
+
+      // 锁定期内也不能接收（原有约束保留）
+      await expect(
+        token.connect(investor1).transfer(investor3.address, hre.ethers.parseEther("1"))
+      ).to.be.revertedWith("Receiver in lockup period");
+    });
+
+    it("should allow transfer after lockup expires", async function () {
+      await complianceModule.setLockupEnd(investor3.address, 0);
+      await token.connect(investor3).transfer(investor1.address, hre.ethers.parseEther("10"));
+      expect(await token.balanceOf(investor3.address)).to.equal(hre.ethers.parseEther("90"));
+    });
+
+    it("should enforce jurisdiction restriction on-chain", async function () {
+      // 锁区 investor3 的司法管辖区（SG=702）
+      await complianceModule.setRestrictedCountry(702, true);
+      expect(await complianceModule.isCountryRestricted(702)).to.equal(true);
+
+      // 锁区用户不能转出
+      await expect(
+        token.connect(investor3).transfer(investor1.address, hre.ethers.parseEther("1"))
+      ).to.be.revertedWith("Sender jurisdiction restricted");
+
+      // 锁区用户不能接收
+      await expect(
+        token.connect(investor1).transfer(investor3.address, hre.ethers.parseEther("1"))
+      ).to.be.revertedWith("Receiver jurisdiction restricted");
+
+      // 解除锁区后恢复
+      await complianceModule.setRestrictedCountry(702, false);
+    });
+
+    it("should pause and block all operations, then unpause", async function () {
+      await token.pause();
+      expect(await token.paused()).to.equal(true);
+
+      // 熔断期间：转账被拒
+      await expect(
+        token.connect(investor1).transfer(investor2.address, hre.ethers.parseEther("1"))
+      ).to.be.revertedWith("RWAToken: paused");
+
+      // 熔断期间：mint 也被拒
+      await expect(
+        token.mint(investor1.address, hre.ethers.parseEther("1"), assetId)
+      ).to.be.revertedWith("RWAToken: paused");
+
+      // 解除熔断后恢复
+      await token.unpause();
+      expect(await token.paused()).to.equal(false);
+      await token.connect(investor1).transfer(investor2.address, hre.ethers.parseEther("1"));
+    });
   });
 });

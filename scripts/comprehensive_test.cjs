@@ -3,16 +3,29 @@
 const { ethers } = require(require("path").join(__dirname, "..", "contracts", "erc3643", "node_modules", "ethers"));
 
 const BASE = "http://localhost:8080/api";
-const IR = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const CM = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+const fs = require("fs");
+const path = require("path");
+// 合约地址从 backend/contracts.json 动态读取（重新部署后无需改脚本）
+const contracts = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "..", "backend", "contracts.json"), "utf8")
+);
+const IR = contracts.identityRegistry;
+const CM = contracts.complianceModule;
 const provider = new ethers.JsonRpcProvider("http://localhost:8545");
 const WALLET_KEY = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"; // Hardhat #2
 
 async function req(method, path, body, token) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = "Bearer " + token;
-  const res = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  return { status: res.status, data: await res.json().catch(() => ({})) };
+  // 429 限流时自动重试（最多 5 次，间隔 1s）
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const res = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    if (res.status !== 429) {
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  return { status: 429, data: {} };
 }
 const results = [];
 function check(name, ok, extra = "") {

@@ -22,6 +22,9 @@ contract ComplianceModule is IComplianceModule {
     mapping(address => InvestorRules) private _investorRules;
     IIdentityRegistry public identityRegistry;
 
+    // 司法管辖区锁区：链上兜底（后端 KYC 拒绝之外的第二道防线）
+    mapping(uint16 => bool) private _restrictedCountries;
+
     modifier onlyOwner() {
         require(msg.sender == owner, "ComplianceModule: caller is not owner");
         _;
@@ -44,6 +47,14 @@ contract ComplianceModule is IComplianceModule {
         address to,
         uint256 amount
     ) external view override returns (bool allowed, string memory reason) {
+        // 0. 司法管辖区锁区（from/to 任一命中锁区即拒绝——链上兜底，防后端被绕过）
+        if (from != address(0) && _restrictedCountries[identityRegistry.investorCountry(from)]) {
+            return (false, "Sender jurisdiction restricted");
+        }
+        if (_restrictedCountries[identityRegistry.investorCountry(to)]) {
+            return (false, "Receiver jurisdiction restricted");
+        }
+
         // 1. 接收方必须通过KYC验证
         if (!identityRegistry.isVerified(to)) {
             return (false, "Receiver not verified");
@@ -54,10 +65,17 @@ contract ComplianceModule is IComplianceModule {
             return (false, "Receiver not whitelisted");
         }
 
-        // 3. 检查锁定期
-        // solhint-disable-next-line not-rely-on-time
-        if (block.timestamp < _investorRules[to].lockupEnd) {
-            return (false, "Receiver in lockup period");
+        // 3. 锁定期（双向，仅真实转账时生效；mint 场景 from==address(0) 跳过，允许首次认购）
+        if (from != address(0)) {
+            // 接收方在锁定期内不得接收（认购后冻结）
+            // solhint-disable-next-line not-rely-on-time
+            if (block.timestamp < _investorRules[to].lockupEnd) {
+                return (false, "Receiver in lockup period");
+            }
+            // 发送方在锁定期内不得转出（防"认购当天即转让"绕过锁定期）
+            if (block.timestamp < _investorRules[from].lockupEnd) {
+                return (false, "Sender in lockup period");
+            }
         }
 
         // 4. 检查持仓上限（转账后余额不能超过上限）
@@ -113,6 +131,17 @@ contract ComplianceModule is IComplianceModule {
 
     function setLockupEnd(address investor, uint256 lockupEndTime) external override onlyAgent {
         _investorRules[investor].lockupEnd = lockupEndTime;
+    }
+
+    // ========== 司法管辖区锁区管理 ==========
+
+    function setRestrictedCountry(uint16 countryCode, bool restricted) external override onlyAgent {
+        _restrictedCountries[countryCode] = restricted;
+        emit CountryRestrictionSet(countryCode, restricted);
+    }
+
+    function isCountryRestricted(uint16 countryCode) external view override returns (bool) {
+        return _restrictedCountries[countryCode];
     }
 
     function addAgent(address agent) external override onlyOwner {

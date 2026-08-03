@@ -10,6 +10,7 @@ interface IComplianceModule {
     event ComplianceCheckFailed(address indexed from, address indexed to, uint256 value, string reason);
     event ComplianceRuleAdded(bytes32 indexed ruleId, string description);
     event ComplianceRuleRemoved(bytes32 indexed ruleId);
+    event CountryRestrictionSet(uint16 indexed countryCode, bool restricted);
 
     /**
      * @dev 转账前合规检查
@@ -37,11 +38,17 @@ interface IComplianceModule {
      */
     function lockupEnd(address investor) external view returns (uint256);
 
+    /**
+     * @dev 查询司法管辖区是否被锁区
+     */
+    function isCountryRestricted(uint16 countryCode) external view returns (bool);
+
     // 管理函数
     function addToWhitelist(address investor, uint256 maxHold, uint256 lockupEndTime) external;
     function removeFromWhitelist(address investor) external;
     function setMaxHolding(address investor, uint256 maxHold) external;
     function setLockupEnd(address investor, uint256 lockupEndTime) external;
+    function setRestrictedCountry(uint16 countryCode, bool restricted) external;
     function addAgent(address agent) external;
     function removeAgent(address agent) external;
     function isAgent(address account) external view returns (bool);

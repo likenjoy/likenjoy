@@ -37,6 +37,9 @@ contract RWAToken is IRWAToken, Context {
     bytes32 public assetId;
     uint256 public nav;
 
+    // 紧急熔断（安全事件/合规整改时暂停所有代币操作）
+    bool public paused;
+
     // 分红追踪
     mapping(address => uint256) public lastDividendBlock;
 
@@ -47,6 +50,11 @@ contract RWAToken is IRWAToken, Context {
 
     modifier onlyAgent() {
         require(_agents[_msgSender()] || _msgSender() == owner, "RWAToken: caller is not agent");
+        _;
+    }
+
+    modifier notPaused() {
+        require(!paused, "RWAToken: paused");
         _;
     }
 
@@ -82,7 +90,7 @@ contract RWAToken is IRWAToken, Context {
     function totalSupply() external view override returns (uint256) { return _totalSupply; }
     function balanceOf(address account) external view override returns (uint256) { return _balances[account]; }
 
-    function transfer(address to, uint256 amount) external override returns (bool) {
+    function transfer(address to, uint256 amount) external override notPaused returns (bool) {
         _transfer(_msgSender(), to, amount);
         return true;
     }
@@ -96,7 +104,7 @@ contract RWAToken is IRWAToken, Context {
         return true;
     }
 
-    function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
+    function transferFrom(address from, address to, uint256 amount) external override notPaused returns (bool) {
         uint256 currentAllowance = _allowances[from][_msgSender()];
         require(currentAllowance >= amount, "RWAToken: insufficient allowance");
         unchecked {
@@ -112,7 +120,7 @@ contract RWAToken is IRWAToken, Context {
      * @dev 发行代币（资产上链）
      * 只有Agent可以调用，接收方必须通过KYC和白名单
      */
-    function mint(address to, uint256 amount, bytes32 assetId_) external override onlyAgent {
+    function mint(address to, uint256 amount, bytes32 assetId_) external override onlyAgent notPaused {
         require(to != address(0), "RWAToken: mint to zero");
         require(amount > 0, "RWAToken: zero amount");
 
@@ -136,7 +144,7 @@ contract RWAToken is IRWAToken, Context {
     /**
      * @dev 销毁代币（赎回）
      */
-    function burn(address from, uint256 amount, string calldata reason) external override onlyAgent {
+    function burn(address from, uint256 amount, string calldata reason) external override onlyAgent notPaused {
         require(from != address(0), "RWAToken: burn from zero");
         require(_balances[from] >= amount, "RWAToken: insufficient balance");
 
@@ -156,7 +164,7 @@ contract RWAToken is IRWAToken, Context {
         address to,
         uint256 amount,
         string calldata reason
-    ) external override onlyAgent {
+    ) external override onlyAgent notPaused {
         require(from != address(0), "RWAToken: transfer from zero");
         require(to != address(0), "RWAToken: transfer to zero");
         require(_balances[from] >= amount, "RWAToken: insufficient balance");
@@ -185,9 +193,22 @@ contract RWAToken is IRWAToken, Context {
     // ========== 资产信息 ==========
 
     function updateNAV(uint256 newNAV) external override onlyAgent {
+        require(newNAV > 0, "RWAToken: NAV must be positive");
         uint256 oldNAV = nav;
         nav = newNAV;
         emit NAVUpdated(oldNAV, newNAV, block.timestamp);
+    }
+
+    // ========== 紧急熔断 ==========
+
+    function pause() external override onlyAgent {
+        paused = true;
+        emit Paused(_msgSender());
+    }
+
+    function unpause() external override onlyAgent {
+        paused = false;
+        emit Unpaused(_msgSender());
     }
 
     // ========== 分红 ==========
@@ -199,7 +220,7 @@ contract RWAToken is IRWAToken, Context {
      *
      * 注意：调用者需先 approve 本合约足够的 token 额度
      */
-    function distributeDividends(address token, uint256 totalAmount) external override onlyAgent {
+    function distributeDividends(address token, uint256 totalAmount) external override onlyAgent notPaused {
         require(token != address(0), "RWAToken: zero token");
         require(totalAmount > 0, "RWAToken: zero amount");
         require(_totalSupply > 0, "RWAToken: no supply");

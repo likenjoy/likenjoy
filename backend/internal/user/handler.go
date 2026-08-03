@@ -19,8 +19,8 @@ type Handler struct {
 	jwtSecret string
 }
 
-func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc, jwtSecret: "change-me-in-production"}
+func NewHandler(svc *Service, jwtSecret string) *Handler {
+	return &Handler{svc: svc, jwtSecret: jwtSecret}
 }
 
 type RegisterRequest struct {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // ContractsConfig 合约地址配置
@@ -148,10 +149,22 @@ func main() {
 		}
 	}
 
+	// JWT 密钥：必须通过环境变量注入；拒绝默认/空值（防止硬编码密钥伪造 admin token）
+	// 必须在 userHandler（签发侧）和 AuthMiddleware（验证侧）之前解析，保证两侧一致
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" || jwtSecret == "change-me-in-production" {
+		if os.Getenv("ALLOW_DEV_SECRET") == "true" {
+			jwtSecret = "change-me-in-production"
+			log.Println("WARNING: using INSECURE default JWT secret (ALLOW_DEV_SECRET=true) - NEVER use in production")
+		} else {
+			log.Fatalf("FATAL: JWT_SECRET must be set to a strong random value (e.g. openssl rand -hex 32). Refusing to start with default secret.")
+		}
+	}
+
 	// 初始化各模块
 	userRepo := user.NewRepository(db)
 	userSvc := user.NewService(userRepo)
-	userHandler := user.NewHandler(userSvc)
+	userHandler := user.NewHandler(userSvc, jwtSecret)
 
 	kycRepo := kyc.NewRepository(db)
 	kycSvc := kyc.NewService(kycRepo)
@@ -198,7 +211,18 @@ func main() {
 		log.Println("Blockchain operator injected into asset handler")
 	}
 
-	authMW := middleware.AuthMiddleware("change-me-in-production")
+	// JWT 密钥已在上方解析（签发/验证共用），此处只组装验证侧中间件
+	authMW := middleware.AuthMiddleware(jwtSecret, func(uid string) (string, string, error) {
+		id, err := uuid.Parse(uid)
+		if err != nil {
+			return "", "", err
+		}
+		u, err := userRepo.FindByID(id)
+		if err != nil {
+			return "", "", err
+		}
+		return string(u.Role), string(u.Status), nil
+	})
 	adminMW := middleware.RoleMiddleware("admin", "compliance")
 
 	r := gin.Default()
@@ -206,9 +230,13 @@ func main() {
 	// CORS 中间件必须在所有路由之前
 	r.Use(corsMiddleware())
 
+	// 敏感接口限流：登录/注册 20 次/分钟/IP（防暴力破解与撞库；
+	// 防爆破核心是失败锁定，总次数阈值给合法客户端留余量）
+	loginLimiter := middleware.NewRateLimiter(60*1e9, 20) // 1 分钟窗口
 	api := r.Group("/api")
 
 	auth := api.Group("/auth")
+	auth.Use(middleware.RateLimitMiddleware(loginLimiter))
 	{
 		auth.POST("/register", userHandler.Register)
 		auth.POST("/login", userHandler.Login)

@@ -26,6 +26,9 @@ const ERC3643TokenABI = `[
 	{"type":"function","name":"forcedTransfer","inputs":[{"type":"address","name":"from"},{"type":"address","name":"to"},{"type":"uint256","name":"amount"},{"type":"string","name":"reason"}],"outputs":[],"stateMutability":"nonpayable"},
 	{"type":"function","name":"updateNAV","inputs":[{"type":"uint256","name":"newNAV"}],"outputs":[],"stateMutability":"nonpayable"},
 	{"type":"function","name":"distributeDividends","inputs":[{"type":"address","name":"token"},{"type":"uint256","name":"totalAmount"}],"outputs":[],"stateMutability":"nonpayable"},
+	{"type":"function","name":"pause","inputs":[],"outputs":[],"stateMutability":"nonpayable"},
+	{"type":"function","name":"unpause","inputs":[],"outputs":[],"stateMutability":"nonpayable"},
+	{"type":"function","name":"paused","inputs":[],"outputs":[{"type":"bool"}],"stateMutability":"view"},
 	{"type":"function","name":"addAgent","inputs":[{"type":"address","name":"agent"}],"outputs":[],"stateMutability":"nonpayable"},
 	{"type":"function","name":"removeAgent","inputs":[{"type":"address","name":"agent"}],"outputs":[],"stateMutability":"nonpayable"},
 	{"type":"function","name":"isAgent","inputs":[{"type":"address","name":"account"}],"outputs":[{"type":"bool"}],"stateMutability":"view"},
@@ -35,7 +38,9 @@ const ERC3643TokenABI = `[
 	{"type":"event","name":"TokenBurned","inputs":[{"type":"address","name":"from","indexed":true},{"type":"uint256","name":"amount","indexed":false},{"type":"string","name":"reason","indexed":false}],"anonymous":false},
 	{"type":"event","name":"ForcedTransfer","inputs":[{"type":"address","name":"from","indexed":true},{"type":"address","name":"to","indexed":true},{"type":"uint256","name":"amount","indexed":false},{"type":"string","name":"reason","indexed":false}],"anonymous":false},
 	{"type":"event","name":"NAVUpdated","inputs":[{"type":"uint256","name":"oldNAV","indexed":false},{"type":"uint256","name":"newNAV","indexed":false},{"type":"uint256","name":"timestamp","indexed":false}],"anonymous":false},
-	{"type":"event","name":"DividendDistributed","inputs":[{"type":"uint256","name":"totalAmount","indexed":false},{"type":"uint256","name":"timestamp","indexed":false}],"anonymous":false}
+	{"type":"event","name":"DividendDistributed","inputs":[{"type":"uint256","name":"totalAmount","indexed":false},{"type":"uint256","name":"timestamp","indexed":false}],"anonymous":false},
+	{"type":"event","name":"Paused","inputs":[{"type":"address","name":"by","indexed":true}],"anonymous":false},
+	{"type":"event","name":"Unpaused","inputs":[{"type":"address","name":"by","indexed":true}],"anonymous":false}
 ]`
 
 // IdentityRegistryABI 身份注册表 ABI
@@ -60,7 +65,10 @@ const ComplianceModuleABI = `[
 	{"type":"function","name":"addToWhitelist","inputs":[{"type":"address","name":"investor"},{"type":"uint256","name":"maxHold"},{"type":"uint256","name":"lockupEndTime"}],"outputs":[],"stateMutability":"nonpayable"},
 	{"type":"function","name":"removeFromWhitelist","inputs":[{"type":"address","name":"investor"}],"outputs":[],"stateMutability":"nonpayable"},
 	{"type":"function","name":"setMaxHolding","inputs":[{"type":"address","name":"investor"},{"type":"uint256","name":"maxHold"}],"outputs":[],"stateMutability":"nonpayable"},
-	{"type":"function","name":"setLockupEnd","inputs":[{"type":"address","name":"investor"},{"type":"uint256","name":"lockupEndTime"}],"outputs":[],"stateMutability":"nonpayable"}
+	{"type":"function","name":"setLockupEnd","inputs":[{"type":"address","name":"investor"},{"type":"uint256","name":"lockupEndTime"}],"outputs":[],"stateMutability":"nonpayable"},
+	{"type":"function","name":"isCountryRestricted","inputs":[{"type":"uint16","name":"countryCode"}],"outputs":[{"type":"bool"}],"stateMutability":"view"},
+	{"type":"function","name":"setRestrictedCountry","inputs":[{"type":"uint16","name":"countryCode"},{"type":"bool","name":"restricted"}],"outputs":[],"stateMutability":"nonpayable"},
+	{"type":"event","name":"CountryRestrictionSet","inputs":[{"type":"uint16","name":"countryCode","indexed":true},{"type":"bool","name":"restricted","indexed":false}],"anonymous":false}
 ]`
 
 // ParseABI 解析ABI字符串
