@@ -163,17 +163,27 @@ func (s *Service) onChainRegister(sub *KYCSubmission) error {
 	identityHash := crypto.Keccak256Hash([]byte(sub.UserID.String()))
 	countryCode := CountryCode(sub.Country)
 
-	// 1) 注册链上身份
-	tx, err := s.identityOp.RegisterIdentity(ctx, s.registryAddr, investor, identityHash, countryCode)
-	if err != nil {
-		return err
+	// 1) 注册链上身份（幂等：已注册则跳过，避免 revert）
+	verified, err := s.identityOp.IsVerified(ctx, s.registryAddr, investor)
+	if err == nil && verified {
+		log.Printf("[kyc] identity already registered for %s, skip", wallet)
+	} else {
+		tx, err := s.identityOp.RegisterIdentity(ctx, s.registryAddr, investor, identityHash, countryCode)
+		if err != nil {
+			return err
+		}
+		if _, err := blockchain.WaitMined(ctx, s.identityOp.Client(), tx); err != nil {
+			return err
+		}
+		log.Printf("[kyc] identity registered on-chain for %s (wallet=%s, country=%d)", sub.UserID, wallet, countryCode)
 	}
-	if _, err := blockchain.WaitMined(ctx, s.identityOp.Client(), tx); err != nil {
-		return err
-	}
-	log.Printf("[kyc] identity registered on-chain for %s (wallet=%s, country=%d)", sub.UserID, wallet, countryCode)
 
-	// 2) 加入白名单（无持仓上限、无锁定期）
+	// 2) 加入白名单（幂等：已白名单则跳过）
+	listed, err := s.complianceOp.IsWhitelisted(ctx, s.complianceAddr, investor)
+	if err == nil && listed {
+		log.Printf("[kyc] already whitelisted for %s, skip", wallet)
+		return nil
+	}
 	tx2, err := s.complianceOp.AddToWhitelist(ctx, s.complianceAddr, investor, new(big.Int), 0)
 	if err != nil {
 		return err

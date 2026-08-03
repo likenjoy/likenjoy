@@ -105,6 +105,20 @@ func NewIdentityOperator(client *Client) *IdentityOperator {
 }
 
 // RegisterIdentity 注册链上身份
+// IsVerified 查询地址是否已注册链上身份
+func (op *IdentityOperator) IsVerified(ctx context.Context, registryAddr, investor common.Address) (bool, error) {
+	abi := IdentityABI()
+	data, err := abi.Pack("isVerified", investor)
+	if err != nil {
+		return false, fmt.Errorf("pack isVerified: %w", err)
+	}
+	out, err := op.client.ETHClient().CallContract(ctx, ethereum.CallMsg{To: &registryAddr, Data: data}, nil)
+	if err != nil {
+		return false, fmt.Errorf("call isVerified: %w", err)
+	}
+	return new(big.Int).SetBytes(out).Sign() == 1, nil
+}
+
 // Client 返回底层区块链客户端
 func (op *IdentityOperator) Client() *Client {
 	return op.client
@@ -140,6 +154,20 @@ func NewComplianceOperator(client *Client) *ComplianceOperator {
 }
 
 // AddToWhitelist 添加白名单
+// IsWhitelisted 查询地址是否已加入白名单
+func (op *ComplianceOperator) IsWhitelisted(ctx context.Context, complianceAddr, investor common.Address) (bool, error) {
+	abi := ComplianceABI()
+	data, err := abi.Pack("isWhitelisted", investor)
+	if err != nil {
+		return false, fmt.Errorf("pack isWhitelisted: %w", err)
+	}
+	out, err := op.client.ETHClient().CallContract(ctx, ethereum.CallMsg{To: &complianceAddr, Data: data}, nil)
+	if err != nil {
+		return false, fmt.Errorf("call isWhitelisted: %w", err)
+	}
+	return new(big.Int).SetBytes(out).Sign() == 1, nil
+}
+
 // Client 返回底层区块链客户端
 func (op *ComplianceOperator) Client() *Client {
 	return op.client
