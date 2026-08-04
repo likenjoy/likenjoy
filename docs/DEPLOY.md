@@ -2,6 +2,8 @@
 
 > 目标读者：运营者本人。从零到上线（含合约部署、链配置、服务器部署、HTTPS）。
 > 架构：单机 Docker（nginx + frontend + backend + SQLite）+ EVM 公链（L2 为主）。
+>
+> **图例：🔑 = 需要你生成/填写的值　✍️ = 需要你执行的命令　⚠️ = 需要你决策的事项**
 
 ---
 
@@ -14,8 +16,8 @@
 链上：IdentityRegistry + ComplianceModule + RWAToken + TrustedForwarder
 ```
 
-- **链的选择**：测试网用 **Arbitrum Sepolia**（免费）；主网建议 **Arbitrum 或 Base**（L2 gas 便宜，支撑"平台代付 gas"模式）
-- **三账户模型**（务必先理解，见第 1 节）
+- **⚠️ 链的选择**：测试网用 **Arbitrum Sepolia**（免费）；主网建议 **Arbitrum 或 Base**（L2 gas 便宜，支撑"平台代付 gas"模式）
+- **⚠️ 三账户模型**（务必先理解，见第 1 节）
 
 ---
 
@@ -23,18 +25,18 @@
 
 平台账户 = 部署合约 + mint/burn + 代付 gas 的运营账户。**必须独立于你的个人钱包**。
 
+🔑 **执行以下命令生成平台私钥（自己保管，绝不外传）：**
+
 ```bash
-# 在本机 contracts/erc3643 目录下执行，生成平台私钥
+# ✍️ 在本机 contracts/erc3643 目录下执行
 node -e "const c=require('crypto');console.log('0x'+c.randomBytes(32).toString('hex'))"
 ```
 
-记录输出（示例）：`0x1a2b...`（**私钥，绝不外传，冷存储备份**）
+🔑 **记录输出（示例 `0x1a2b...`）→ 这就是平台私钥，冷存储备份（纸笔/加密U盘）**
 
-算出地址（任选其一）：
+🔑 **算出平台地址（二选一）：**
 - 把私钥导入 MetaMask（Add account → Import private key）→ 看到地址
 - 或：`node -e "const {Wallet}=require('ethers');console.log(new Wallet('0x1a2b...').address)"`
-
-这个地址就是**平台账户**。备份方式：私钥抄在纸上放保险柜 / 加密 U 盘；服务器上只用它的**环境变量引用**。
 
 > ⚠️ 铁律：个人钱包私钥永不进服务器；平台私钥永不用于个人资产。
 
@@ -42,11 +44,11 @@ node -e "const c=require('crypto');console.log('0x'+c.randomBytes(32).toString('
 
 ## 2. 第二步：给平台账户领测试网代币（免费）
 
-Arbitrum Sepolia 的 ETH（用于付 gas）：
-- 水龙头：https://faucet.arbitrum.io 或 https://www.alchemy.com/faucets/arbitrum-sepolia
-- 输入平台账户地址 → 领取（每日有额度，够部署用）
+🔑 **平台地址填入水龙头领取测试 ETH：**
+- https://faucet.arbitrum.io （或 https://www.alchemy.com/faucets/arbitrum-sepolia）
+- 输入第 1 步算出的**平台地址** → 领取（每日有额度，够部署用）
 
-> 主网部署前，平台账户需持有真实 ETH/ARB（金额 = 部署 gas + 后续代付 gas 储备）。
+> ⚠️ 主网部署前：平台账户需持有真实 ETH/ARB（部署 gas + 后续代付 gas 储备）。
 
 ---
 
@@ -54,40 +56,42 @@ Arbitrum Sepolia 的 ETH（用于付 gas）：
 
 ### 3.1 部署到测试网（Arbitrum Sepolia）
 
+🔑 **把第 1 步生成的平台私钥填入下面命令（替换 `0x平台私钥`）：**
+
 ```bash
+# ✍️ 在 contracts/erc3643 目录下
 cd contracts/erc3643
 
 # 方式一：私钥直接作为环境变量（临时、不回显）
 DEPLOYER_PRIVATE_KEY=0x平台私钥 npx hardhat run scripts/deploy.cjs --network arbitrumSepolia
 
-# 方式二：把私钥写入 .env 文件（推荐，避免 shell 历史记录泄露）
-# 在 contracts/erc3643/ 下创建 .env：
-#   DEPLOYER_PRIVATE_KEY=0x平台私钥
+# 方式二：私钥写入 contracts/erc3643/.env（推荐，避免 shell 历史泄露）
+#   🔑 创建 .env 文件，内容：DEPLOYER_PRIVATE_KEY=0x平台私钥
 npx hardhat run scripts/deploy.cjs --network arbitrumSepolia
 ```
 
-### 3.2 部署成功的标志
+### 3.2 部署成功的标志（确认输出包含以下全部）
 
 ```
-IdentityRegistry deployed to: 0x...
+IdentityRegistry deployed to: 0x...          ← 记录这四个地址
 ComplianceModule deployed to: 0x...
 RWAToken deployed to: 0x...
 ERC2771Forwarder deployed to: 0x...
 TrustedForwarder bound to RWAToken
-Platform identity registered: 0x平台账户
+Platform identity registered: 0x平台账户     ← 应为第 1 步的地址
 Platform whitelisted on ComplianceModule
 Addresses saved to backend/contracts.json
 ```
 
-部署脚本自动完成：平台账户链上注册身份（国家=HK 344）+ 白名单 + 绑定转发器。
-在 [Arbitrum Sepolia 区块浏览器](https://sepolia.arbiscan.io) 输入合约地址可验证。
+🔑 **验证**：在 [Arbitrum Sepolia 区块浏览器](https://sepolia.arbiscan.io) 输入合约地址可查看。
+部署脚本已自动完成：平台账户链上注册身份（国家=HK 344）+ 白名单 + 绑定转发器。
 
 ### 3.3 主网部署（上线阶段）
 
-**先决条件：合约已通过第三方审计（强制，见第 7 节）。**
+> ⚠️ **先决条件：合约已通过第三方审计（强制，见第 7 节）。**
 
 ```bash
-cd contracts/erc3643
+# ✍️ 在 contracts/erc3643 目录下（🔑 需先配置 DEPLOYER_PRIVATE_KEY）
 npx hardhat run scripts/deploy.cjs --network arbitrum
 # 或 --network base / --network polygon
 ```
@@ -101,36 +105,41 @@ npx hardhat run scripts/deploy.cjs --network arbitrum
 ### 4.1 拉取代码
 
 ```bash
+# ✍️ 服务器上执行；🔑 若仓库为私有需配置 Gitee 凭据
 git clone https://gitee.com/likenjoy/likenjoy.git
 cd likenjoy
 ```
 
-### 4.2 填写环境变量
+### 4.2 填写环境变量（🔑 全部需要你填！）
 
 ```bash
 cp .env.example .env
 ```
 
-编辑 `.env`：
+🔑 **编辑 `.env`，逐项填写：**
 
 ```ini
-# 链上 RPC（测试网或主网，与部署时一致）
-ETH_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
-# 链 ID：Arbitrum Sepolia=421614 / Arbitrum=42161 / Base=8453 / Polygon=137
-ETH_CHAIN_ID=421614
+# ① RPC 地址（与部署合约的链一致！）
+#    测试网：https://sepolia-rollup.arbitrum.io/rpc
+#    主网 Arbitrum：https://arb1.arbitrum.io/rpc
+ETH_RPC_URL=这里填你的RPC地址
 
-# 平台私钥（与部署合约的账户一致！否则没有 agent 权限）
-ETH_PRIVATE_KEY=0x平台私钥
+# ② 链 ID（必须与 RPC 对应！）
+#    Arbitrum Sepolia=421614 / Arbitrum=42161 / Base=8453 / Base Sepolia=84532 / Polygon=137 / Polygon Amoy=80002
+ETH_CHAIN_ID=这里填链ID数字
 
-# JWT 密钥：长随机串
-JWT_SECRET=<openssl rand -hex 32 的输出>
+# ③ 平台私钥（必须与部署合约的账户一致！否则无 agent 权限，mint 会失败）
+ETH_PRIVATE_KEY=这里填第1步生成的平台私钥
+
+# ④ JWT 密钥（先执行 openssl rand -hex 32 生成，再粘贴）
+JWT_SECRET=这里粘贴openssl rand -hex 32的输出
 ```
 
 > 启动安全校验（已内置）：JWT_SECRET 缺失/默认值 → 拒绝启动；非本地 RPC 未设 ETH_CHAIN_ID → 拒绝启动。
 
 ### 4.3 确认合约配置
 
-`backend/contracts.json` 必须是**目标链**的部署产物（第 3 步生成）。
+🔑 **检查 `backend/contracts.json` 是否为目标链的部署产物**（第 3 步生成，内含四个合约地址）。
 
 ---
 
@@ -138,13 +147,14 @@ JWT_SECRET=<openssl rand -hex 32 的输出>
 
 ### 5.1 服务器要求
 
-- 香港 VPS（数据留在港，合规友好）；2 核 4G 起步
+- ⚠️ **香港 VPS**（数据留在港，合规友好）；2 核 4G 起步
 - 系统：Ubuntu 22.04 / Debian 12
 - 开放端口：80、443（SSH 22）
 
 ### 5.2 安装 Docker
 
 ```bash
+# ✍️ 服务器上执行
 curl -fsSL https://get.docker.com | sh
 systemctl enable --now docker
 # 国内网络加速（可选）
@@ -157,6 +167,7 @@ systemctl restart docker
 ### 5.3 启动
 
 ```bash
+# ✍️ 在项目根目录（.env 已配好）
 cd ~/likenjoy
 docker compose up -d --build
 docker compose ps        # 三个服务都应为 running
@@ -165,10 +176,11 @@ docker compose ps        # 三个服务都应为 running
 ### 5.4 验证
 
 ```bash
-curl -I http://服务器IP          # nginx 响应 200/301
+# ✍️ 🔑 把 服务器IP 换成你的实际 IP
+curl -I http://你的服务器IP            # nginx 响应 200/301
 curl -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" \
-  -d '{"email":"test@x.com","password":"x"}'   # 返回 400/401 即后端正常（不应 502）
-docker compose logs -f backend   # 查看启动日志，应看到 Signer 地址与合约地址
+  -d '{"email":"test@x.com","password":"x"}'   # 400/401 即后端正常（不应 502）
+docker compose logs -f backend   # 应看到 Signer 地址（= 平台账户）与合约地址
 ```
 
 ---
@@ -177,42 +189,46 @@ docker compose logs -f backend   # 查看启动日志，应看到 Signer 地址�
 
 ### 6.1 域名解析
 
-A 记录指向服务器 IP（如 `app.yourdomain.com`）。
+🔑 **在域名服务商（阿里云/腾讯云/Cloudflare）添加 A 记录：**
+- 主机记录：`app`（示例）
+- 记录值：你的服务器 IP
+- 完成后 `ping app.yourdomain.com` 能通
 
 ### 6.2 申请证书（Certbot 自动）
 
 ```bash
+# ✍️ 服务器上执行；🔑 把 app.yourdomain.com 换成你的域名
 apt install -y certbot
-certbot certonly --standalone -d app.yourdomain.com   # 按提示完成
+certbot certonly --standalone -d app.yourdomain.com   # 按提示操作
 # 证书路径：/etc/letsencrypt/live/app.yourdomain.com/
 ```
 
 ### 6.3 配置 nginx
 
-编辑 `nginx.conf`（项目根）：
-- `server_name` 改为你的域名
-- 443 端口 + SSL 证书路径（certbot 生成）
-- 80 端口 301 跳转 https
+🔑 **编辑项目根 `nginx.conf`，改两处：**
+1. `server_name` → 你的域名（如 `app.yourdomain.com`）
+2. SSL 证书路径 → `/etc/letsencrypt/live/app.yourdomain.com/fullchain.pem` 和 `privkey.pem`
 
 重启生效：
 
 ```bash
+# ✍️ 服务器上执行
 docker compose restart nginx
 ```
 
-浏览器访问 `https://app.yourdomain.com` → 登录页 + 绿锁。
+🔑 **浏览器访问 `https://app.yourdomain.com` → 登录页 + 绿锁 = 成功**
 
 ---
 
 ## 7. 上线前检查清单（必读）
 
-### 安全（已内置，需确认配置）
-- [ ] `JWT_SECRET` 为强随机值（启动时会强制校验）
+### 安全（已内置，确认配置即可）
+- [ ] `JWT_SECRET` 为强随机值（启动时强制校验）
 - [ ] `ETH_PRIVATE_KEY` 为平台专用账户，服务器权限最小化（仅 root 可读 .env）
-- [ ] 平台账户测试网/主网代币余额充足（代付 gas 模式需要持续储备）
+- [ ] 平台账户 gas 代币余额充足（代付模式需要持续储备）
 
-### 合规（上线前必须完成）
-- [ ] **智能合约第三方审计**（如 CertiK / SlowMist / 本地审计所）——不审计不上主网
+### 合规（⚠️ 上线前必须完成，需你决策）
+- [ ] **智能合约第三方审计**（CertiK / SlowMist / 本地审计所）——不审计不上主网
 - [ ] 商业 KYC/AML 接入（当前为自建筛查，牌照期需升级）
 - [ ] 制裁名单接入完整数据源（当前为内置示例）
 - [ ] 锁定期/白名单/国家锁区按产品规则配置
