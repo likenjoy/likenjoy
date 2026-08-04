@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, Table, Statistic, Row, Col, Tag, Space, Typography, Alert, Descriptions } from "antd";
-import { WalletOutlined } from "@ant-design/icons";
+import { Card, Table, Statistic, Row, Col, Tag, Space, Typography, Alert, Descriptions, Button } from "antd";
+import { WalletOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { api } from "@/lib/api";
 import GaslessTransfer from "@/components/GaslessTransfer";
 
@@ -27,6 +27,7 @@ interface Portfolio {
 export default function PortfolioPage() {
   const [data, setData] = useState<Portfolio | null>(null);
   const [loading, setLoading] = useState(true);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   useEffect(() => {
     api.get<Portfolio>("/portfolio")
@@ -71,10 +72,25 @@ export default function PortfolioPage() {
       )}
 
       <Row gutter={16}>
-        <Col xs={24} md={10}>
-          <GaslessTransfer />
+        <Col xs={24} md={24}>
+          {/* 免 gas 绿色 Banner + 转账入口 */}
+          <Alert
+            type="success"
+            showIcon
+            message="免 Gas 转账已开通：平台为您代付 Gas（EIP-2771 元交易）"
+            description="您无需持有 ETH 即可向其他合规投资者转账，交易按平台费率自动结算。"
+            action={
+              <Button type="primary" size="small" icon={<ThunderboltOutlined />} onClick={() => setTransferOpen(true)}>
+                免 Gas 转账
+              </Button>
+            }
+            style={{ borderRadius: 8, marginBottom: 16 }}
+          />
         </Col>
-        <Col xs={24} md={14}>
+      </Row>
+
+      <Row gutter={16}>
+        <Col xs={24} md={24}>
           <Card title="链上持仓明细" loading={loading}>
         {hasWallet ? (
           <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
@@ -95,6 +111,9 @@ export default function PortfolioPage() {
         </Card>
         </Col>
       </Row>
+
+      {/* 免 Gas 转账抽屉 */}
+      <GaslessTransfer open={transferOpen} onClose={() => setTransferOpen(false)} />
     </Space>
   );
 }

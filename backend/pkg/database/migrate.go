@@ -296,6 +296,18 @@ func MigrateSQLite(db *sql.DB) error {
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_accreditation_user ON accreditation_checks(user_id)`,
+		`CREATE TABLE IF NOT EXISTS advertisements (
+			id TEXT PRIMARY KEY,
+			title TEXT NOT NULL,
+			image_url TEXT NOT NULL DEFAULT '',
+			link_url TEXT NOT NULL DEFAULT '',
+			position TEXT NOT NULL DEFAULT 'home_banner',
+			enabled INTEGER NOT NULL DEFAULT 1,
+			sort_order INTEGER NOT NULL DEFAULT 0,
+			created_by TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 
 	// 兼容旧库：为已存在的 users 表补充 wallet_address 列

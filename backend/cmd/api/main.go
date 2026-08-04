@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"rwa-exchange/internal/asset"
+	"rwa-exchange/internal/ad"
 	"rwa-exchange/internal/blockchain"
 	"rwa-exchange/internal/dividend"
 	"rwa-exchange/internal/kyc"
@@ -216,6 +217,11 @@ func main() {
 	revenueSvc := revenue.NewService(revenueRepo)
 	revenueHandler := revenue.NewHandler(revenueSvc)
 
+	// 广告位（管理后台维护，Landing/交易页展示）
+	adRepo := ad.NewRepository(db)
+	adSvc := ad.NewService(adRepo)
+	adHandler := ad.NewHandler(adSvc)
+
 	// EIP-2771 元交易中继（平台代付 gas）
 	var relayHandler *relay.Handler
 	if bcClient != nil && contracts != nil {
@@ -264,6 +270,9 @@ func main() {
 	// 防爆破核心是失败锁定，总次数阈值给合法客户端与自动化测试留余量）
 	loginLimiter := middleware.NewRateLimiter(60*1e9, 60) // 1 分钟窗口
 	api := r.Group("/api")
+
+	// 广告公开查询（Landing 展示，无需登录）
+	api.GET("/ads", adHandler.ListPublic)
 
 	auth := api.Group("/auth")
 	auth.Use(middleware.RateLimitMiddleware(loginLimiter))
@@ -365,6 +374,12 @@ func main() {
 		admin.GET("/revenue", revenueHandler.ListRevenue)
 		admin.GET("/gas", revenueHandler.ListGas)
 		admin.GET("/audit", revenueHandler.ListAudit)
+
+		// 广告管理
+		admin.GET("/ads", adHandler.ListAdmin)
+		admin.POST("/ads", adHandler.Create)
+		admin.PUT("/ads/:id", adHandler.Update)
+		admin.DELETE("/ads/:id", adHandler.Delete)
 	}
 
 	port := os.Getenv("PORT")

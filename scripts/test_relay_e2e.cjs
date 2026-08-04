@@ -63,6 +63,7 @@ function typedData(chainId, forwarderAddr, req) {
     "function balanceOf(address) view returns (uint256)",
     "function transfer(address,uint256)",
     "function isWhitelisted(address) view returns (bool)",
+    "function transferFeeRate() view returns (uint256)",
   ]);
   const ir = new ethers.Contract(contracts.identityRegistry, iface, platform);
   const cm = new ethers.Contract(contracts.complianceModule, iface, platform);
@@ -123,7 +124,10 @@ function typedData(chainId, forwarderAddr, req) {
 
   await new Promise(r => setTimeout(r, 1500));
   const balAfter = await token.balanceOf(receiver.address);
-  check("接收方余额 +5（链上确认）", balAfter === balBefore + ethers.parseEther("5"), `+${ethers.formatEther(balAfter - balBefore)}`);
+  // 转账手续费联动：实际到账 = 5 - 链上费率扣收（如费率>0）
+  const feeRate = await token.transferFeeRate();
+  const expectedNet = ethers.parseEther("5") - (ethers.parseEther("5") * feeRate) / 10000n;
+  check("接收方余额增加（含手续费扣收）", balAfter === balBefore + expectedNet, `+${ethers.formatEther(balAfter - balBefore)}`);
 
   const newNonce = await fwd.nonces(sender.address);
   check("nonce 递增（防重放生效）", newNonce === nonce + 1n);

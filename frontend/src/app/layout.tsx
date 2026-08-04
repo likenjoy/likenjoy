@@ -29,7 +29,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLogin = pathname === "/login";
+  const isStandalone = pathname === "/login" || pathname === "/"; // 登录页 + 展示页独立布局
 
   return (
     <html lang="zh-CN" className="h-full">
@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <WalletProvider>
           <AntdRegistry>
             <ThemeProvider>
-              {isLogin ? children : <AppShell>{children}</AppShell>}
+              {isStandalone ? children : <AppShell>{children}</AppShell>}
             </ThemeProvider>
           </AntdRegistry>
         </WalletProvider>

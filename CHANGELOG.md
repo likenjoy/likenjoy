@@ -2,6 +2,27 @@
 
 本项目所有显著变更均记录于此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.5.0] - 2026-08-04
+
+### 🎨 UI 全面升级（参考 GitHub/Gitee 开源项目）
+
+- **多主题系统**：绿白（默认，Maker 青绿 #1AAB9B）+ 暗色（Uniswap/Geeker 参考），顶栏一键切换 + localStorage 记忆（参考 Geeker-Admin 主题切换器）
+- **布局重构**：深色/浅色侧边栏 + 分组导航（投资中心/我的资产/账户与合规/管理后台）+ 白色顶栏（页面标题/主题切换/钱包/用户菜单），参考 ant-design-pro mix 布局
+- **Landing 产品展示页**：Hero 标语 → 数据条 → 4 大特性 → 资产类别 → 三步投资流程 → CTA → 页脚，参考 Centrifuge/RealT 官网，双主题适配
+- **资产列表双视图**：网格卡片（状态徽章/单价大数字）/表格切换 + 分类 Tab（黄金/地产/私募债/碳汇），参考 RealToken dashboard-v2
+- **持仓页**：免 Gas 转账改 Drawer（461px）+ 绿色 Banner 醒目提示平台代付，参考 Centrifuge fabric Drawer
+- 全局主题 token：金融字体栈/数字等宽对齐/圆角体系
+
+### 📢 广告系统（增收功能）
+
+- 后端：`advertisements` 表 + admin CRUD（`/api/admin/ads`）+ 公开查询（`/api/ads?position=home_banner`）
+- 前端：Landing 广告位（Carousel 轮播，有图显示图/无图渐变背景兜底）+ 管理后台「广告管理」页（新增/编辑/上下线/删除/排序）
+- 权限：仅 admin 可管理；公开接口无鉴权（Landing 展示）
+- 测试：`test_ads_e2e.cjs` 12 项全过（创建→展示→停用/启用→权限隔离→删除）
+
+### 测试成绩
+- 广告 e2e 12/12、元交易 12/12（含手续费扣收联动断言）、手续费 9/9、锁定 4/4、合约 31/31、API 28/28
+
 ## [0.4.2] - 2026-08-04
 
 ### 🔒 登录失败锁定（防暴力破解核心）

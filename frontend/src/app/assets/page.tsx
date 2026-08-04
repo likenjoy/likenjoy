@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Alert, Card, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, message } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Button, Alert, Card, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, message, Segmented, Empty } from "antd";
+import { PlusOutlined, TableOutlined, AppstoreOutlined } from "@ant-design/icons";
 import { api } from "@/lib/api";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 interface Asset {
   id: string;
@@ -24,10 +24,27 @@ interface Asset {
 const statusColors: Record<string, string> = {
   draft: "default",
   pending: "processing",
+  live: "success",
   active: "green",
   suspended: "orange",
   closed: "red",
 };
+
+const statusLabels: Record<string, string> = {
+  draft: "草稿", pending: "审核中", live: "认购中", active: "交易中", suspended: "暂停", closed: "已关闭",
+};
+
+const typeLabels: Record<string, string> = {
+  gold: "黄金", carbon_credit: "碳汇", real_estate: "地产收益权", private_debt: "私募债", other: "其他",
+};
+
+const TYPE_TABS = [
+  { label: "全部", value: "all" },
+  { label: "黄金", value: "gold" },
+  { label: "地产收益权", value: "real_estate" },
+  { label: "私募债", value: "private_debt" },
+  { label: "碳汇", value: "carbon_credit" },
+];
 
 export default function AssetsPage() {
   const router = useRouter();
@@ -36,6 +53,8 @@ export default function AssetsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [mintFeeRate, setMintFeeRate] = useState(0);
+  const [viewMode, setViewMode] = useState<string>("grid"); // grid | table
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [form] = Form.useForm();
 
   // 费率披露：获取铸造费率（万分数）
@@ -60,6 +79,8 @@ export default function AssetsPage() {
   };
 
   useEffect(() => { fetchAssets(); }, []);
+
+  const filtered = typeFilter === "all" ? assets : assets.filter((a) => a.asset_type === typeFilter);
 
   const handleCreate = async (values: Record<string, unknown>) => {
     setSubmitting(true);
@@ -99,13 +120,63 @@ export default function AssetsPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <Title level={4} style={{ margin: 0 }}>资产发行</Title>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <Title level={4} style={{ margin: 0 }}>资产</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>发行新资产</Button>
       </div>
-      <Card>
-        <Table dataSource={assets} columns={columns} rowKey="id" loading={loading} />
-      </Card>
+
+      {/* 分类 Tab + 视图切换（RealToken 参考） */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <Segmented
+          options={TYPE_TABS.map((t) => t.label)}
+          value={TYPE_TABS.find((t) => t.value === typeFilter)?.label || "全部"}
+          onChange={(v) => setTypeFilter(TYPE_TABS.find((t) => t.label === v)?.value || "all")}
+        />
+        <Segmented
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { value: "grid", icon: <AppstoreOutlined /> },
+            { value: "table", icon: <TableOutlined /> },
+          ]}
+        />
+      </div>
+
+      {viewMode === "grid" ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+          {filtered.map((a) => (
+            <Card
+              key={a.id}
+              hoverable
+              onClick={() => router.push(`/assets/${a.id}`)}
+              styles={{ body: { padding: 20 } }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <Tag color={statusColors[a.status] || "default"} style={{ borderRadius: 4 }}>
+                  {statusLabels[a.status] || a.status}
+                </Tag>
+                <Tag color="blue" style={{ borderRadius: 4 }}>{typeLabels[a.asset_type] || a.asset_type}</Tag>
+              </div>
+              <Text strong style={{ fontSize: 16, color: "#141414", display: "block" }}>{a.name}</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{a.symbol}</Text>
+              <div style={{ margin: "14px 0 4px" }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>单价</Text>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "#1AAB9B" }}>
+                  ${Number(a.price_per_unit).toLocaleString()}
+                </div>
+              </div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                最小认购 ${Number(a.min_investment).toLocaleString()} · 总供应 {Number(a.total_supply).toLocaleString()}
+              </Text>
+            </Card>
+          ))}
+          {!filtered.length && !loading && <Empty style={{ gridColumn: "1 / -1", padding: 48 }} description="暂无资产" />}
+        </div>
+      ) : (
+        <Card>
+          <Table dataSource={filtered} columns={columns} rowKey="id" loading={loading} onRow={(r) => ({ onClick: () => router.push(`/assets/${r.id}`), style: { cursor: "pointer" } })} />
+        </Card>
+      )}
       <Modal title="发行新资产" open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="name" label="资产名称" rules={[{ required: true }]}><Input /></Form.Item>

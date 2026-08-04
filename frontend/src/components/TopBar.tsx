@@ -22,6 +22,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/kyc": "KYC 认证",
   "/disclosure": "合规披露",
   "/admin/fees": "费率与收入",
+  "/admin/ads": "广告管理",
   "/admin/investors": "投资者管理",
 };
 

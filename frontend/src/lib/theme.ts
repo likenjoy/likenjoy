@@ -26,51 +26,10 @@ export interface AppTheme {
 const fontStack =
   "Inter, -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif";
 
-// ===== 风格 A：金融蓝（Centrifuge 参考）=====
-const themeA: AppTheme = {
-  id: "a",
-  name: "金融蓝",
-  themeConfig: {
-    token: {
-      colorPrimary: "#2762FF",
-      colorInfo: "#2762FF",
-      colorSuccess: "#16A34A",
-      colorWarning: "#FFC012",
-      colorError: "#E5484D",
-      colorBgLayout: "#F2F4F7",
-      colorBorderSecondary: "#E7E7E7",
-      borderRadius: 8,
-      borderRadiusLG: 12,
-      fontFamily: fontStack,
-      fontSize: 14,
-      controlHeight: 40,
-      wireframe: false,
-    },
-    components: {
-      Button: { borderRadius: 4, controlHeight: 40, primaryShadow: "0 2px 6px rgba(39,98,255,.35)" },
-      Card: { borderRadiusLG: 8 },
-      Table: { headerBg: "#F6F6F6", headerColor: "#667085", rowHoverBg: "#F2F4F7" },
-      Statistic: { contentFontSize: 28, titleFontSize: 13 },
-      Steps: { iconSize: 28 },
-      Tag: { borderRadiusSM: 4 },
-    },
-  },
-  layoutColors: {
-    sidebarBg: "linear-gradient(180deg, #00243C 0%, #0B3B5C 100%)",
-    sidebarText: "rgba(255,255,255,.75)",
-    sidebarSelected: "#2762FF",
-    menuTheme: "dark",
-    topbarBg: "#FFFFFF",
-    contentBg: "#F2F4F7",
-    border: "#E7E7E7",
-    textPrimary: "#252B34",
-  },
-};
-
 // ===== 风格 B：暗黑科技（Uniswap + Geeker-Admin 参考）=====
 const themeB: AppTheme = {
-  id: "b",
-  name: "暗黑科技",
+  id: "dark",
+  name: "暗色",
   themeConfig: {
     algorithm: theme.darkAlgorithm,
     token: {
@@ -109,10 +68,10 @@ const themeB: AppTheme = {
   },
 };
 
-// ===== 风格 C：浅色极简（Maker 青绿 + Uniswap 白底参考）=====
+// ===== 风格 C：绿白浅色（Maker 青绿 + Uniswap 白底参考）=====
 const themeC: AppTheme = {
-  id: "c",
-  name: "浅色极简",
+  id: "light",
+  name: "绿白",
   themeConfig: {
     token: {
       colorPrimary: "#1AAB9B",
@@ -150,8 +109,8 @@ const themeC: AppTheme = {
   },
 };
 
-export const THEMES: AppTheme[] = [themeA, themeB, themeC];
-export const DEFAULT_THEME_ID = "a";
+export const THEMES: AppTheme[] = [themeC, themeB];
+export const DEFAULT_THEME_ID = "light";
 
-export const themeConfig = themeA.themeConfig;
-export const layoutColors = themeA.layoutColors;
+export const themeConfig = themeC.themeConfig;
+export const layoutColors = themeC.layoutColors;
