@@ -2,6 +2,7 @@ package user
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,10 +18,17 @@ import (
 type Handler struct {
 	svc       *Service
 	jwtSecret string
+	guard     *LoginGuard
 }
 
 func NewHandler(svc *Service, jwtSecret string) *Handler {
-	return &Handler{svc: svc, jwtSecret: jwtSecret}
+	guard := NewLoginGuard(5, 15*time.Minute) // 连续失败 5 次锁 15 分钟
+	log.Printf("[login-guard] enabled: maxFails=%d lockDuration=%s", 5, 15*time.Minute)
+	return &Handler{
+		svc:       svc,
+		jwtSecret: jwtSecret,
+		guard:     guard,
+	}
 }
 
 type RegisterRequest struct {
@@ -88,11 +96,27 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	// 防爆破：连续失败锁定（key = IP + 邮箱，双维度）
+	key := c.ClientIP() + "|" + strings.ToLower(req.Email)
+	if err := h.guard.Check(key); err != nil {
+		c.JSON(http.StatusLocked, gin.H{"error": "too many failed attempts, account temporarily locked"})
+		return
+	}
+
 	u, err := h.svc.Authenticate(req.Email, req.Password)
 	if err != nil {
+		// 记录失败；达到阈值触发锁定（LOCKED 日志为安全事件留痕）
+		if h.guard.RecordFail(key) {
+			log.Printf("[login-guard] LOCKED key=%s", key)
+			c.JSON(http.StatusLocked, gin.H{"error": "too many failed attempts, account temporarily locked"})
+			return
+		}
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
+
+	// 登录成功，清除失败记录
+	h.guard.Reset(key)
 
 	token, err := h.generateToken(u)
 	if err != nil {

@@ -48,7 +48,8 @@ function forgeJWT(payload, secret) {
   const r4 = await fetch(BASE + "/admin/fees");
   check("无 token 被拒", r4.status === 401, "status=" + r4.status);
 
-  // 5. 登录限流：快速连续 25 次登录（错密码）应出现 429
+  // 5. 登录暴力破解防护：快速连续 25 次登录（错密码）应被拦截
+  //    429 = 频率限流 / 423 = 连续失败锁定（两者都是防爆破拦截）
   console.log("\n[2] 登录暴力破解防护");
   let got429 = false;
   for (let i = 0; i < 25; i++) {
@@ -57,9 +58,9 @@ function forgeJWT(payload, secret) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "nobody" + i + "@test.com", password: "wrongpass" })
     });
-    if (r.status === 429) { got429 = true; break; }
+    if (r.status === 429 || r.status === 423) { got429 = true; break; }
   }
-  check("暴力破解触发限流 429", got429);
+  check("暴力破解被拦截（限流 429 / 锁定 423）", got429);
 
   // 6. 角色实时校验：伪造 token 声称 admin，但 DB 无此用户 → 拒绝
   const fakeUid = forgeJWT(
