@@ -268,6 +268,25 @@ func main() {
 			protected.POST("/relay/execute", relayHandler.Execute)
 		}
 
+		// 链上配置公开接口（无鉴权：合约地址为公开信息，供前端构造元交易）
+		protected.GET("/config/contracts", func(c *gin.Context) {
+			if contracts == nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "contracts not configured"})
+				return
+			}
+			chainID := "31337"
+			if bcClient != nil {
+				chainID = bcClient.ChainID().String()
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"forwarder":         contracts.Forwarder,
+				"rwa_token":         contracts.RWAToken,
+				"identity_registry": contracts.IdentityRegistry,
+				"compliance_module": contracts.ComplianceModule,
+				"chain_id":          chainID,
+			})
+		})
+
 		protected.POST("/kyc/submit", kycHandler.Submit)
 		protected.GET("/kyc/status/:user_id", kycHandler.GetStatus)
 		protected.GET("/kyc/accreditation/:user_id", kycHandler.GetAccreditation)

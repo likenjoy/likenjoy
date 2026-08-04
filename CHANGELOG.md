@@ -90,7 +90,7 @@ RWA Exchange 完整平台 MVP：
 ## 路线图
 
 - [x] ~~EIP-2771 元交易 + 自建 Go relayer（gas 代付）~~（v0.4.0 完成）
-- [ ] 前端「免 gas 转账」交互（后端 relayer 已就绪）
+- [x] ~~前端「免 gas 转账」交互~~（持仓页 GaslessTransfer 组件，v0.4.1 完成）
 - [ ] 登录失败锁定（连续失败 N 次锁 IP/账户）
 - [ ] 法币入金通道（Transak / MoonPay，香港 HKD 支持）
 - [ ] 商业 KYC 服务接入（Shufti Pro / Sumsub）+ OpenSanctions 增强

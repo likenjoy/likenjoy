@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, Table, Statistic, Row, Col, Tag, Space, Typography, Alert, Descriptions } from "antd";
 import { WalletOutlined } from "@ant-design/icons";
 import { api } from "@/lib/api";
+import GaslessTransfer from "@/components/GaslessTransfer";
 
 const { Title, Text } = Typography;
 
@@ -69,7 +70,12 @@ export default function PortfolioPage() {
           description={"请在左侧连接钱包并点击【绑定钱包到账户】，绑定后此处将显示链上真实持仓。"} />
       )}
 
-      <Card title="链上持仓明细" loading={loading}>
+      <Row gutter={16}>
+        <Col xs={24} md={10}>
+          <GaslessTransfer />
+        </Col>
+        <Col xs={24} md={14}>
+          <Card title="链上持仓明细" loading={loading}>
         {hasWallet ? (
           <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
             <Descriptions.Item label="钱包地址">
@@ -86,7 +92,9 @@ export default function PortfolioPage() {
             { title: "状态", render: () => <Tag color="green">live</Tag> },
           ]} />
         {data?.note && <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 12 }}>{data.note}</Text>}
-      </Card>
+        </Card>
+        </Col>
+      </Row>
     </Space>
   );
 }
