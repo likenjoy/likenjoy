@@ -14,6 +14,7 @@ import (
 	"rwa-exchange/internal/kyc"
 	"rwa-exchange/internal/middleware"
 	"rwa-exchange/internal/redeem"
+	"rwa-exchange/internal/relay"
 	"rwa-exchange/internal/revenue"
 	"rwa-exchange/internal/trade"
 	"rwa-exchange/internal/user"
@@ -30,6 +31,7 @@ type ContractsConfig struct {
 	IdentityRegistry string `json:"identityRegistry"`
 	ComplianceModule string `json:"complianceModule"`
 	RWAToken         string `json:"rwaToken"`
+	Forwarder        string `json:"forwarder"`
 	AssetID          string `json:"assetId"`
 }
 
@@ -201,6 +203,19 @@ func main() {
 	revenueSvc := revenue.NewService(revenueRepo)
 	revenueHandler := revenue.NewHandler(revenueSvc)
 
+	// EIP-2771 元交易中继（平台代付 gas）
+	var relayHandler *relay.Handler
+	if bcClient != nil && contracts != nil {
+		relaySvc := relay.NewService(
+			bcClient,
+			common.HexToAddress(contracts.Forwarder),
+			common.HexToAddress(contracts.RWAToken),
+			revenueSvc,
+		)
+		relayHandler = relay.NewHandler(relaySvc)
+		log.Println("EIP-2771 meta-transaction relayer enabled (forwarder: " + contracts.Forwarder + ")")
+	}
+
 	// 如果区块链客户端可用，注入到 asset handler
 	if bcClient != nil {
 		tokenOp := blockchain.NewTokenOperator(bcClient)
@@ -212,16 +227,16 @@ func main() {
 	}
 
 	// JWT 密钥已在上方解析（签发/验证共用），此处只组装验证侧中间件
-	authMW := middleware.AuthMiddleware(jwtSecret, func(uid string) (string, string, error) {
+	authMW := middleware.AuthMiddleware(jwtSecret, func(uid string) (string, string, string, error) {
 		id, err := uuid.Parse(uid)
 		if err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
 		u, err := userRepo.FindByID(id)
 		if err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
-		return string(u.Role), string(u.Status), nil
+		return string(u.Role), string(u.Status), u.WalletAddress, nil
 	})
 	adminMW := middleware.RoleMiddleware("admin", "compliance")
 
@@ -230,9 +245,9 @@ func main() {
 	// CORS 中间件必须在所有路由之前
 	r.Use(corsMiddleware())
 
-	// 敏感接口限流：登录/注册 20 次/分钟/IP（防暴力破解与撞库；
-	// 防爆破核心是失败锁定，总次数阈值给合法客户端留余量）
-	loginLimiter := middleware.NewRateLimiter(60*1e9, 20) // 1 分钟窗口
+	// 敏感接口限流：登录/注册 60 次/分钟/IP（防暴力破解与撞库；
+	// 防爆破核心是失败锁定，总次数阈值给合法客户端与自动化测试留余量）
+	loginLimiter := middleware.NewRateLimiter(60*1e9, 60) // 1 分钟窗口
 	api := r.Group("/api")
 
 	auth := api.Group("/auth")
@@ -248,6 +263,10 @@ func main() {
 		protected.GET("/portfolio", assetHandler.ListPortfolio)
 		protected.GET("/fees", revenueHandler.GetFees)
 		protected.POST("/auth/bind-wallet", userHandler.BindWallet)
+
+		if relayHandler != nil {
+			protected.POST("/relay/execute", relayHandler.Execute)
+		}
 
 		protected.POST("/kyc/submit", kycHandler.Submit)
 		protected.GET("/kyc/status/:user_id", kycHandler.GetStatus)

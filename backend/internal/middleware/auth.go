@@ -17,8 +17,8 @@ type Claims struct {
 }
 
 // UserValidator 实时校验用户状态与角色（防吊销失效：封禁/降权立即生效）
-// 返回 (最新角色, 账户状态)。status 必须为 "active" 才放行。
-type UserValidator func(userID string) (role string, status string, err error)
+// 返回 (最新角色, 账户状态, 绑定钱包地址)。status 必须为 "active" 才放行。
+type UserValidator func(userID string) (role string, status string, wallet string, err error)
 
 // AuthMiddleware JWT 认证中间件
 // 安全要点（对齐 OWASP JWT 指南 + T-REX 权限事故教训）：
@@ -60,8 +60,9 @@ func AuthMiddleware(jwtSecret string, validate UserValidator) gin.HandlerFunc {
 		}
 
 		role := claims.Role
+		wallet := ""
 		if validate != nil {
-			dbRole, status, err := validate(claims.UserID)
+			dbRole, status, dbWallet, err := validate(claims.UserID)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "user not found or token revoked"})
 				return
@@ -72,11 +73,13 @@ func AuthMiddleware(jwtSecret string, validate UserValidator) gin.HandlerFunc {
 			}
 			// 角色以数据库为准：降权/升权立即生效，旧 token 不残留旧权限
 			role = dbRole
+			wallet = dbWallet
 		}
 
 		c.Set("user_id", uid)
 		c.Set("email", claims.Email)
 		c.Set("role", role)
+		c.Set("wallet_address", wallet)
 		c.Next()
 	}
 }

@@ -40,8 +40,53 @@ contract RWAToken is IRWAToken, Context {
     // 紧急熔断（安全事件/合规整改时暂停所有代币操作）
     bool public paused;
 
+    // EIP-2771 元交易：受信转发器（gas 代付）。forwarder 调用时，
+    // calldata 末尾追加真实发送者地址，_msgSender() 负责还原。
+    address private _trustedForwarder;
+
     // 分红追踪
     mapping(address => uint256) public lastDividendBlock;
+
+    // ========== EIP-2771 元交易支持 ==========
+
+    /**
+     * @dev 设置受信转发器（仅 owner）。设置后，该转发器代付 gas 的调用
+     * 中 _msgSender() 返回真实签名者，权限/合规逻辑照常生效。
+     */
+    function setTrustedForwarder(address forwarder) external onlyOwner {
+        _trustedForwarder = forwarder;
+        emit TrustedForwarderSet(forwarder);
+    }
+
+    function trustedForwarder() external view returns (address) {
+        return _trustedForwarder;
+    }
+
+    /**
+     * @dev ERC-2771 标准接口：返回是否信任该转发器。
+     * OZ ERC2771Forwarder 执行前会 staticcall 此函数校验，
+     * 返回 false 将拒绝执行（ERC2771UntrustfulTarget）。
+     */
+    function isTrustedForwarder(address forwarder) external view returns (bool) {
+        return forwarder == _trustedForwarder;
+    }
+
+    function _msgSender() internal view override returns (address sender) {
+        if (msg.sender == _trustedForwarder && msg.data.length >= 20) {
+            assembly {
+                sender := shr(96, calldataload(sub(calldatasize(), 20)))
+            }
+        } else {
+            sender = super._msgSender();
+        }
+    }
+
+    function _msgData() internal view override returns (bytes calldata) {
+        if (msg.sender == _trustedForwarder) {
+            return msg.data[:msg.data.length - 20];
+        }
+        return super._msgData();
+    }
 
     modifier onlyOwner() {
         require(_msgSender() == owner, "RWAToken: caller is not owner");

@@ -252,4 +252,125 @@ describe("ERC-3643 RealVest Contracts", function () {
       await token.connect(investor1).transfer(investor2.address, hre.ethers.parseEther("1"));
     });
   });
+
+  describe("EIP-2771 Meta-Transaction (gas-less transfer)", function () {
+    let forwarder;
+    const forwarderName = "RWAExchangeForwarder";
+
+    before(async function () {
+      const ERC2771Forwarder = await hre.ethers.getContractFactory("TrustedForwarder");
+      forwarder = await ERC2771Forwarder.deploy(forwarderName);
+      await forwarder.waitForDeployment();
+      await token.setTrustedForwarder(await forwarder.getAddress());
+    });
+
+    // 构造 EIP-712 类型化数据（与 OZ ERC2771Forwarder 完全一致）
+    function buildTypedData(chainId, forwarderAddr, req) {
+      return {
+        domain: { name: forwarderName, version: "1", chainId, verifyingContract: forwarderAddr },
+        types: {
+          ForwardRequest: [
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "value", type: "uint256" },
+            { name: "gas", type: "uint256" },
+            { name: "nonce", type: "uint256" },
+            { name: "deadline", type: "uint48" },
+            { name: "data", type: "bytes" },
+          ],
+        },
+        primaryType: "ForwardRequest",
+        message: req,
+      };
+    }
+
+    it("should execute gas-less transfer via forwarder (msgSender = real signer)", async function () {
+      const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+      const forwarderAddr = await forwarder.getAddress();
+      const balBefore = await token.balanceOf(investor2.address);
+
+      // 构造 transfer(investor2, 5) 的 calldata
+      const iface = new hre.ethers.Interface(["function transfer(address,uint256)"]);
+      const calldata = iface.encodeFunctionData("transfer", [investor2.address, hre.ethers.parseEther("5")]);
+
+      const req = {
+        from: investor1.address,
+        to: await token.getAddress(),
+        value: 0,
+        gas: 300000,
+        nonce: 0, // 首次 nonce
+        deadline: Math.floor(Date.now() / 1000) + 600,
+        data: calldata,
+      };
+
+      const sig = await investor1.signTypedData(
+        buildTypedData(chainId, forwarderAddr, req).domain,
+        buildTypedData(chainId, forwarderAddr, req).types,
+        req
+      );
+
+      // forwarder 执行（relayer 支付 gas，调用者是部署者/平台）
+      await forwarder.execute({ ...req, signature: sig });
+
+      // 余额变化：从 investor1 扣 5，到 investor2 加 5
+      // （若 _msgSender 未还原为 investor1，将从 forwarder 地址扣款而失败）
+      expect(await token.balanceOf(investor2.address)).to.equal(balBefore + hre.ethers.parseEther("5"));
+      expect(await forwarder.nonces(investor1.address)).to.equal(1);
+    });
+
+    it("should reject invalid signature", async function () {
+      const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+      const forwarderAddr = await forwarder.getAddress();
+      const iface = new hre.ethers.Interface(["function transfer(address,uint256)"]);
+      const calldata = iface.encodeFunctionData("transfer", [investor2.address, hre.ethers.parseEther("1")]);
+
+      const req = {
+        from: investor1.address,
+        to: await token.getAddress(),
+        value: 0,
+        gas: 300000,
+        nonce: 1,
+        deadline: Math.floor(Date.now() / 1000) + 600,
+        data: calldata,
+      };
+
+      // 用 investor2 的私钥签名（from 不匹配）
+      const sig = await investor2.signTypedData(
+        buildTypedData(chainId, forwarderAddr, req).domain,
+        buildTypedData(chainId, forwarderAddr, req).types,
+        req
+      );
+
+      await expect(
+        forwarder.execute({ ...req, signature: sig })
+      ).to.be.reverted;
+    });
+
+    it("should reject expired deadline", async function () {
+      const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+      const forwarderAddr = await forwarder.getAddress();
+      const iface = new hre.ethers.Interface(["function transfer(address,uint256)"]);
+      const calldata = iface.encodeFunctionData("transfer", [investor2.address, hre.ethers.parseEther("1")]);
+
+      const req = {
+        from: investor1.address,
+        to: await token.getAddress(),
+        value: 0,
+        gas: 300000,
+        nonce: 1,
+        deadline: Math.floor(Date.now() / 1000) - 60, // 已过期
+        data: calldata,
+      };
+
+      const sig = await investor1.signTypedData(
+        buildTypedData(chainId, forwarderAddr, req).domain,
+        buildTypedData(chainId, forwarderAddr, req).types,
+        req
+      );
+
+      await expect(
+        forwarder.execute({ ...req, signature: sig })
+      ).to.be.reverted;
+    });
+  });
 });

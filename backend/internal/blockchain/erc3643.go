@@ -71,6 +71,14 @@ const ComplianceModuleABI = `[
 	{"type":"event","name":"CountryRestrictionSet","inputs":[{"type":"uint16","name":"countryCode","indexed":true},{"type":"bool","name":"restricted","indexed":false}],"anonymous":false}
 ]`
 
+// TrustedForwarderABI EIP-2771 元交易转发器 ABI
+const TrustedForwarderABI = `[
+	{"type":"function","name":"execute","inputs":[{"type":"tuple","components":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"uint256","name":"gas","type":"uint256"},{"internalType":"uint48","name":"deadline","type":"uint48"},{"internalType":"bytes","name":"data","type":"bytes"},{"internalType":"bytes","name":"signature","type":"bytes"}],"name":"request"}],"outputs":[],"stateMutability":"payable"},
+	{"type":"function","name":"nonces","inputs":[{"internalType":"address","name":"owner","type":"address"}],"outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view"},
+	{"type":"function","name":"verify","inputs":[{"type":"tuple","components":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"uint256","name":"gas","type":"uint256"},{"internalType":"uint48","name":"deadline","type":"uint48"},{"internalType":"bytes","name":"data","type":"bytes"},{"internalType":"bytes","name":"signature","type":"bytes"}],"name":"request"}],"outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view"},
+	{"type":"event","name":"ExecutedForwardRequest","inputs":[{"internalType":"address","name":"signer","type":"address","indexed":true},{"internalType":"uint256","name":"nonce","type":"uint256","indexed":false},{"internalType":"bool","name":"success","type":"bool","indexed":false}],"anonymous":false}
+]`
+
 // ParseABI 解析ABI字符串
 func ParseABI(abiStr string) (abi.ABI, error) {
 	parsed, err := abi.JSON(strings.NewReader(abiStr))
@@ -97,6 +105,9 @@ func IdentityABI() abi.ABI { return MustParseABI(IdentityRegistryABI) }
 
 // ComplianceABI 返回合规模块ABI
 func ComplianceABI() abi.ABI { return MustParseABI(ComplianceModuleABI) }
+
+// ForwarderABI 返回元交易转发器ABI
+func ForwarderABI() abi.ABI { return MustParseABI(TrustedForwarderABI) }
 
 // TokenInfo 代币基本信息
 type TokenInfo struct {

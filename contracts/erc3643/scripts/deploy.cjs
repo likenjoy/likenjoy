@@ -37,6 +37,17 @@ async function main() {
   await complianceModule.addAgent(tokenAddr);
   console.log("Token set as agent on IdentityRegistry and ComplianceModule");
 
+  // 4.5 Deploy TrustedForwarder（EIP-2771 元交易 / gas 代付）
+  const ERC2771Forwarder = await hre.ethers.getContractFactory("TrustedForwarder");
+  const forwarder = await ERC2771Forwarder.deploy("RWAExchangeForwarder");
+  await forwarder.waitForDeployment();
+  const forwarderAddr = await forwarder.getAddress();
+  console.log("ERC2771Forwarder deployed to:", forwarderAddr);
+
+  // 4.6 绑定受信转发器到 RWAToken（元交易调用时 _msgSender() 还原真实签名者）
+  await token.setTrustedForwarder(forwarderAddr);
+  console.log("TrustedForwarder bound to RWAToken");
+
   // 5. 平台账户（部署者/后端签名者）注册链上身份并加入白名单
   //    RWAToken.mint 会调用 complianceModule.canTransfer(0, to, amount) 做合规检查，
   //    接收方必须 isVerified 且 whitelisted，否则 mint 会被 revert。
@@ -51,6 +62,7 @@ async function main() {
   console.log("IdentityRegistry:", irAddr);
   console.log("ComplianceModule:", cmAddr);
   console.log("RWAToken:", tokenAddr);
+  console.log("ERC2771Forwarder:", forwarderAddr);
   console.log("AssetId:", assetId);
 
   // Save addresses to file
@@ -60,6 +72,7 @@ async function main() {
     identityRegistry: irAddr,
     complianceModule: cmAddr,
     rwaToken: tokenAddr,
+    forwarder: forwarderAddr,
     assetId: assetId,
   };
   const outPath = path.join(__dirname, "..", "..", "..", "backend", "contracts.json");

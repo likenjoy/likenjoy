@@ -21,6 +21,7 @@ interface IRWAToken {
     event NAVUpdated(uint256 oldNAV, uint256 newNAV, uint256 timestamp);
     event Paused(address indexed by);
     event Unpaused(address indexed by);
+    event TrustedForwarderSet(address indexed forwarder);
 
     // ERC-20 标准
     function name() external view returns (string memory);
@@ -48,6 +49,11 @@ interface IRWAToken {
     // 紧急熔断
     function pause() external;
     function unpause() external;
+
+    // EIP-2771 元交易
+    function setTrustedForwarder(address forwarder) external;
+    function trustedForwarder() external view returns (address);
+    function isTrustedForwarder(address forwarder) external view returns (bool);
 
     // 分红
     function distributeDividends(address token, uint256 totalAmount) external;

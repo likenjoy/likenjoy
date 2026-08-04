@@ -268,3 +268,10 @@ func (op *ComplianceOperator) sendTransaction(ctx context.Context, contractAddr 
 func WaitMined(ctx context.Context, client *Client, tx *types.Transaction) (*types.Receipt, error) {
 	return bind.WaitMined(ctx, client.ETHClient(), tx)
 }
+
+// SendRaw 通用交易发送（供 relayer 等模块复用）。
+// 与 TokenOperator.sendTransaction 同一加固路径：nonce 锁 + gas 估算 + 等待确认。
+func (c *Client) SendRaw(ctx context.Context, to common.Address, data []byte) (*types.Transaction, error) {
+	tmp := &TokenOperator{client: c}
+	return tmp.sendTransaction(ctx, to, data)
+}

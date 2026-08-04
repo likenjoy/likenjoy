@@ -2,6 +2,31 @@
 
 本项目所有显著变更均记录于此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.4.0] - 2026-08-04
+
+### ⛽ EIP-2771 元交易（gas 代付）
+
+**合约层**
+- 新增 `TrustedForwarder`（OZ `ERC2771Forwarder` 本地包装）：EIP-712 类型化签名、nonce 防重放、deadline 过期校验、批量执行
+- `RWAToken` 支持 ERC-2771：`setTrustedForwarder` / `_msgSender()` 还原真实签名者 / `isTrustedForwarder()` 标准接口
+- Hardhat EVM 目标升级 `cancun`（OZ 5.x 依赖 `mcopy` 指令）
+- 部署脚本：自动部署 forwarder 并绑定 RWAToken，地址写入 `contracts.json`
+
+**后端 Go relayer**
+- 新增 `internal/relay` 模块：`POST /api/relay/execute`（平台代付 gas 转发元交易）
+- 六层安全检查：from=登录用户绑定钱包 / to 平台白名单 / value=0 / deadline 未过期 / nonce 链上一致 / EIP-712 验签（v=27/28→recid 转换）
+- gas 账本审计留痕（`meta_tx_relay` 记录）
+- `blockchain.Client.SendRaw`：通用发送（复用 nonce 锁 + gas 估算 + 等确认加固路径）
+- AuthMiddleware 扩展：上下文注入绑定钱包地址
+
+**测试**
+- 合约单测新增元交易 3 项（gas-less 转账/错误签名/过期）
+- 新增 `scripts/test_relay_e2e.cjs`：端到端 12 项（正常链路 + 5 类攻击面拦截）
+- 验收成绩：合约 25/25、API 28/28、安全模拟 6/6、元交易 e2e 12/12
+
+**其他**
+- 登录/注册限流阈值调至 60 次/分钟（防爆破核心靠失败锁定，总次数为合法客户端留余量）
+
 ## [0.3.0] - 2026-08-04
 
 ### 🔐 安全加固（P0，安全架构师审计驱动）
@@ -64,11 +89,13 @@ RWA Exchange 完整平台 MVP：
 
 ## 路线图
 
+- [x] ~~EIP-2771 元交易 + 自建 Go relayer（gas 代付）~~（v0.4.0 完成）
+- [ ] 前端「免 gas 转账」交互（后端 relayer 已就绪）
+- [ ] 登录失败锁定（连续失败 N 次锁 IP/账户）
 - [ ] 法币入金通道（Transak / MoonPay，香港 HKD 支持）
 - [ ] 商业 KYC 服务接入（Shufti Pro / Sumsub）+ OpenSanctions 增强
-- [ ] EIP-2771 元交易 + 自建 Go relayer（gas 代付）
 - [ ] ERC-1271 合约钱包签名支持（托管钱包/多签客户验签）
+- [ ] 文档哈希上链 + 链下存证（SFC 审计留痕）
 - [ ] 分红升级为 RDT 式线性释放（ERC-4626）
 - [ ] 订单簿两阶段「订单-结算」模式（Centrifuge epoch 参考）
 - [ ] Safe 多签金库 / 托管账户
-- [ ] 文档哈希上链 + 链下存证（SFC 审计留痕）

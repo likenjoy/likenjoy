@@ -9,6 +9,8 @@ const config = {
         enabled: true,
         runs: 200,
       },
+      // OZ 5.x 依赖 Cancun 指令（mcopy），EVM 目标必须 >= cancun
+      evmVersion: "cancun",
     },
   },
   paths: {
