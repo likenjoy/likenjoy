@@ -79,9 +79,11 @@ cd frontend && npm run dev
 ## 生产部署
 
 ```bash
-cp .env.example .env   # 填写 ETH_PRIVATE_KEY / JWT_SECRET / ETH_RPC_URL
+cp .env.example .env   # 填写 ETH_PRIVATE_KEY / JWT_SECRET / ETH_RPC_URL / ETH_CHAIN_ID
 docker compose up -d --build
 ```
+
+**完整部署流程（链选择 → 平台账户 → 合约部署 → 服务器 → HTTPS）见 [`docs/DEPLOY.md`](docs/DEPLOY.md)**。
 
 详见 `SECURITY.md`（上线安全 Checklist）。
 

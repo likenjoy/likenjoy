@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"rwa-exchange/internal/asset"
@@ -106,7 +107,19 @@ func main() {
 		if rpcURL == "" {
 			rpcURL = "http://localhost:8545" // 默认 Hardhat 本地网络
 		}
-		chainID := int64(31337) // Hardhat 默认 chain ID
+		// 链 ID 必须与实际链一致（EIP-155 签名 + EIP-712 域），生产必须设置
+		chainID := int64(31337) // 默认 Hardhat
+		if v := os.Getenv("ETH_CHAIN_ID"); v != "" {
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+				chainID = n
+			} else {
+				log.Fatalf("FATAL: ETH_CHAIN_ID must be an integer, got %q", v)
+			}
+		}
+		// 使用非本地 RPC 时必须显式声明链 ID（防止用 Hardhat 默认值在真实链上签名）
+		if rpcURL != "http://localhost:8545" && os.Getenv("ETH_CHAIN_ID") == "" {
+			log.Fatalf("FATAL: ETH_CHAIN_ID must be set when using a non-local RPC (current chain might not be Hardhat). Refusing to sign with wrong chain id.")
+		}
 
 		privKey := os.Getenv("ETH_PRIVATE_KEY")
 		// 支持从文件加载私钥（KMS 挂载/密钥文件场景）
