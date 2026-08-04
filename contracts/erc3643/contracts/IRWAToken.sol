@@ -22,6 +22,8 @@ interface IRWAToken {
     event Paused(address indexed by);
     event Unpaused(address indexed by);
     event TrustedForwarderSet(address indexed forwarder);
+    event TransferFeeSet(uint256 rate, address indexed collector);
+    event TransferFeeCollected(address indexed from, address indexed collector, uint256 fee, uint256 netAmount);
 
     // ERC-20 标准
     function name() external view returns (string memory);
@@ -54,6 +56,11 @@ interface IRWAToken {
     function setTrustedForwarder(address forwarder) external;
     function trustedForwarder() external view returns (address);
     function isTrustedForwarder(address forwarder) external view returns (bool);
+
+    // 转账手续费
+    function setTransferFee(uint256 rate, address collector) external;
+    function transferFeeRate() external view returns (uint256);
+    function feeCollector() external view returns (address);
 
     // 分红
     function distributeDividends(address token, uint256 totalAmount) external;

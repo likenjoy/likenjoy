@@ -373,4 +373,101 @@ describe("ERC-3643 RealVest Contracts", function () {
       ).to.be.reverted;
     });
   });
+
+  describe("Transfer Fee (T-REX TransferFees 模式)", function () {
+    let feeWallet;
+    before(async function () {
+      [, , , , , feeWallet] = await hre.ethers.getSigners();
+    });
+
+    it("should set transfer fee by owner only", async function () {
+      await token.setTransferFee(50, feeWallet.address); // 0.5%
+      expect(await token.transferFeeRate()).to.equal(50);
+      expect(await token.feeCollector()).to.equal(feeWallet.address);
+    });
+
+    it("should reject fee rate over 10%", async function () {
+      await expect(
+        token.setTransferFee(1001, feeWallet.address)
+      ).to.be.revertedWith("RWAToken: fee rate max 10%");
+    });
+
+    it("should reject non-owner setting fee", async function () {
+      await expect(
+        token.connect(investor1).setTransferFee(10, feeWallet.address)
+      ).to.be.revertedWith("RWAToken: caller is not owner");
+    });
+
+    it("should deduct fee on transfer (collector gets fee, receiver gets net)", async function () {
+      // investor1 当前余额 20（前面测试链式操作后），转 10 个 → fee=0.05
+      const bal1 = await token.balanceOf(investor1.address);
+      const balTo = await token.balanceOf(investor2.address);
+      const balCol = await token.balanceOf(feeWallet.address);
+      const amount = hre.ethers.parseEther("10");
+      const fee = (amount * 50n) / 10000n; // 0.05
+      const net = amount - fee;
+
+      await token.connect(investor1).transfer(investor2.address, amount);
+
+      expect(await token.balanceOf(investor1.address)).to.equal(bal1 - amount);
+      expect(await token.balanceOf(investor2.address)).to.equal(balTo + net);
+      expect(await token.balanceOf(feeWallet.address)).to.equal(balCol + fee);
+    });
+
+    it("should not deduct fee when rate is zero", async function () {
+      await token.setTransferFee(0, feeWallet.address);
+      const bal1 = await token.balanceOf(investor1.address);
+      const balTo = await token.balanceOf(investor2.address);
+      const amount = hre.ethers.parseEther("1");
+      await token.connect(investor1).transfer(investor2.address, amount);
+      expect(await token.balanceOf(investor1.address)).to.equal(bal1 - amount);
+      expect(await token.balanceOf(investor2.address)).to.equal(balTo + amount);
+    });
+
+    it("should still work via meta-transaction (gas-less transfer with fee)", async function () {
+      // 恢复费率，验证元交易路径同样扣费
+      await token.setTransferFee(50, feeWallet.address);
+
+      const ERC2771Forwarder = await hre.ethers.getContractFactory("TrustedForwarder");
+      const fwd = await ERC2771Forwarder.deploy("RWAExchangeForwarder");
+      await fwd.waitForDeployment();
+      await token.setTrustedForwarder(await fwd.getAddress());
+
+      const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+      const iface = new hre.ethers.Interface(["function transfer(address,uint256)"]);
+      const calldata = iface.encodeFunctionData("transfer", [investor2.address, hre.ethers.parseEther("2")]);
+
+      const req = {
+        from: investor1.address,
+        to: await token.getAddress(),
+        value: 0,
+        gas: 300000,
+        nonce: Number(await fwd.nonces(investor1.address)),
+        deadline: Math.floor(Date.now() / 1000) + 600,
+        data: calldata,
+      };
+      const typedData = {
+        domain: { name: "RWAExchangeForwarder", version: "1", chainId, verifyingContract: await fwd.getAddress() },
+        types: {
+          ForwardRequest: [
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "value", type: "uint256" },
+            { name: "gas", type: "uint256" },
+            { name: "nonce", type: "uint256" },
+            { name: "deadline", type: "uint48" },
+            { name: "data", type: "bytes" },
+          ],
+        },
+        primaryType: "ForwardRequest",
+        message: req,
+      };
+      const sig = await investor1.signTypedData(typedData.domain, typedData.types, req);
+
+      const balColBefore = await token.balanceOf(feeWallet.address);
+      await fwd.execute({ ...req, signature: sig });
+      const fee = (hre.ethers.parseEther("2") * 50n) / 10000n;
+      expect(await token.balanceOf(feeWallet.address)).to.equal(balColBefore + fee);
+    });
+  });
 });

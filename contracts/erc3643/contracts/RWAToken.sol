@@ -40,6 +40,11 @@ contract RWAToken is IRWAToken, Context {
     // 紧急熔断（安全事件/合规整改时暂停所有代币操作）
     bool public paused;
 
+    // 转账手续费（T-REX TransferFees 模式：链上强制扣收，转入平台 treasury）
+    // rate 为万分数（0=关闭，上限 1000 = 10%）
+    uint256 public transferFeeRate;
+    address public feeCollector;
+
     // EIP-2771 元交易：受信转发器（gas 代付）。forwarder 调用时，
     // calldata 末尾追加真实发送者地址，_msgSender() 负责还原。
     address private _trustedForwarder;
@@ -244,6 +249,20 @@ contract RWAToken is IRWAToken, Context {
         emit NAVUpdated(oldNAV, newNAV, block.timestamp);
     }
 
+    // ========== 转账手续费配置 ==========
+
+    /**
+     * @dev 配置转账手续费（T-REX TransferFees 模式）
+     * @param rate 万分数（0=关闭；上限 1000 = 10%，防异常配置吞掉转账）
+     * @param collector 手续费收款地址（平台 treasury）
+     */
+    function setTransferFee(uint256 rate, address collector) external override onlyOwner {
+        require(rate <= 1000, "RWAToken: fee rate max 10%");
+        transferFeeRate = rate;
+        feeCollector = collector;
+        emit TransferFeeSet(rate, collector);
+    }
+
     // ========== 紧急熔断 ==========
 
     function pause() external override onlyAgent {
@@ -316,10 +335,27 @@ contract RWAToken is IRWAToken, Context {
             require(_balances[to] + amount <= maxHold, "RWAToken: exceeds max holding");
         }
 
-        unchecked { _balances[from] -= amount; }
-        unchecked { _balances[to] += amount; }
+        // 转账手续费：链上强制扣收（T-REX TransferFees 模式）
+        // 费率>0 且已配置收款地址时，从转账金额中扣除 fee 转给平台 treasury
+        uint256 fee = 0;
+        if (transferFeeRate > 0 && feeCollector != address(0)) {
+            fee = (amount * transferFeeRate) / 10000;
+            if (fee > 0) {
+                if (fee >= amount) {
+                    // 极端配置保护：手续费不允许吞掉全部转账金额
+                    fee = amount - 1;
+                }
+                unchecked { _balances[feeCollector] += fee; }
+                emit Transfer(from, feeCollector, fee);
+                emit TransferFeeCollected(from, feeCollector, fee, amount - fee);
+            }
+        }
 
-        emit Transfer(from, to, amount);
+        uint256 netAmount = amount - fee;
+        unchecked { _balances[from] -= amount; }
+        unchecked { _balances[to] += netAmount; }
+
+        emit Transfer(from, to, netAmount);
     }
 
     function _approve(address owner_, address spender, uint256 amount) internal {

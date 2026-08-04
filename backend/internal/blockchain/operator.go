@@ -94,6 +94,30 @@ func (op *TokenOperator) DistributeDividends(ctx context.Context, tokenAddr, div
 	return op.sendTransaction(ctx, tokenAddr, data)
 }
 
+// SetTransferFee 配置链上转账手续费（T-REX TransferFees 模式）
+func (op *TokenOperator) SetTransferFee(ctx context.Context, tokenAddr common.Address, rate uint64, collector common.Address) (*types.Transaction, error) {
+	abi := TokenABI()
+	data, err := abi.Pack("setTransferFee", big.NewInt(int64(rate)), collector)
+	if err != nil {
+		return nil, fmt.Errorf("pack setTransferFee: %w", err)
+	}
+	return op.sendTransaction(ctx, tokenAddr, data)
+}
+
+// TransferFeeRate 查询链上转账费率（万分数）
+func (op *TokenOperator) TransferFeeRate(ctx context.Context, tokenAddr common.Address) (uint64, error) {
+	abi := TokenABI()
+	data, err := abi.Pack("transferFeeRate")
+	if err != nil {
+		return 0, err
+	}
+	out, err := op.client.ETHClient().CallContract(ctx, ethereum.CallMsg{To: &tokenAddr, Data: data}, nil)
+	if err != nil {
+		return 0, err
+	}
+	return new(big.Int).SetBytes(out).Uint64(), nil
+}
+
 // IdentityOperator 身份注册表操作器
 type IdentityOperator struct {
 	client *Client

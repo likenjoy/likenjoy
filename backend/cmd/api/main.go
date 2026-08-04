@@ -236,7 +236,9 @@ func main() {
 		assetHandler.SetBlockchain(tokenOp, tokenAddr)
 		assetHandler.SetRevenue(revenueSvc)
 		assetHandler.SetUserRepo(userRepo)
-		log.Println("Blockchain operator injected into asset handler")
+		// 费率更新联动链上转账手续费（T-REX TransferFees 模式）
+		revenueHandler.SetBlockchain(tokenOp, tokenAddr)
+		log.Println("Blockchain operator injected into asset & revenue handlers")
 	}
 
 	// JWT 密钥已在上方解析（签发/验证共用），此处只组装验证侧中间件
