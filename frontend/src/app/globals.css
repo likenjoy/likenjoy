@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f2f4f7;
+  --foreground: #252b34;
 }
 
 @theme inline {
@@ -12,15 +12,21 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* 数字统一等宽对齐（金融场景：金额/收益率列对齐） */
+.ant-statistic-content,
+.ant-table td,
+.ant-descriptions-item-content {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 金额强调色（涨跌） */
+.text-up { color: #16a34a; }
+.text-down { color: #e5484d; }
+.text-gold { color: #ffc012; }

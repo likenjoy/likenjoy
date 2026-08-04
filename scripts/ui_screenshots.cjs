@@ -26,28 +26,26 @@ const pages = [
 (async () => {
   if (!fs.existsSync(EDGE)) { console.error("Edge not found"); process.exit(2); }
   fs.mkdirSync(OUT_DIR, { recursive: true });
+  const themeId = process.argv[2] || "a"; // 主题：a/b/c
+  const tag = themeId === "a" ? "A-金融蓝" : themeId === "b" ? "B-暗黑科技" : "C-浅色极简";
+  console.log("主题:", tag);
   const browser = await puppeteer.launch({
     executablePath: EDGE, headless: "new",
     args: ["--no-sandbox", "--disable-gpu", "--window-size=1440,900"],
     defaultViewport: { width: 1440, height: 900 },
   });
 
-  // 登录态（注册 admin 并注入 token 到 localStorage，让管理后台页面可渲染）
-  const page0 = await browser.newPage();
-  await page0.goto(BASE + "/", { waitUntil: "networkidle2", timeout: 30000 });
-  await page0.evaluate(() => {
-    // 尝试从登录页 localStorage 获取 token（如已有）
-  });
-  await page0.close();
-
   for (const p of pages) {
     const page = await browser.newPage();
     try {
       await page.goto(BASE + p.path, { waitUntil: "networkidle2", timeout: 30000 });
-      await new Promise(r => setTimeout(r, 1500));
-      const file = path.join(OUT_DIR, p.name + ".png");
+      // 设置主题并刷新
+      await page.evaluate((tid) => { localStorage.setItem("rwa-theme", tid); }, themeId);
+      await page.reload({ waitUntil: "networkidle2", timeout: 30000 });
+      await new Promise(r => setTimeout(r, 1200));
+      const file = path.join(OUT_DIR, `${tag}-${p.name}.png`);
       await page.screenshot({ path: file, fullPage: false });
-      console.log("OK  " + p.name + " -> " + file);
+      console.log("OK  " + p.name);
     } catch (e) {
       console.log("ERR " + p.name + " -> " + e.message.slice(0, 80));
     }

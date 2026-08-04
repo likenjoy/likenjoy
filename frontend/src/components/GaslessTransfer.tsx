@@ -91,10 +91,10 @@ export default function GaslessTransfer() {
       const deadline = Math.floor(Date.now() / 1000) + 600; // 10 分钟有效
       const forwardRequest = {
         from: address,
-        to: cfg.rwa_token,
-        value: "0",
-        gas: 300000,
-        nonce: Number(nonce),
+        to: cfg.rwa_token as `0x${string}`,
+        value: BigInt(0),
+        gas: BigInt(300000),
+        nonce: BigInt(nonce),
         deadline,
         data: calldata,
       };
@@ -193,7 +193,7 @@ export default function GaslessTransfer() {
 async function publicClientReadNonce(cfg: ContractsConfig, address: string) {
   const { getPublicClient } = await import("@wagmi/core");
   const { wagmiConfig } = await import("@/lib/web3");
-  const client = getPublicClient(wagmiConfig, { chainId: Number(cfg.chain_id) });
+  const client = getPublicClient(wagmiConfig, { chainId: Number(cfg.chain_id) as 31337 });
   return client.readContract({
     address: cfg.forwarder as `0x${string}`,
     abi: forwarderAbi,
