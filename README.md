@@ -5,6 +5,8 @@
 > ⚖️ **许可证**：PolyForm Noncommercial 1.0.0 —— **非商业用途免费；商业用途（部署运营/SaaS/白标）需购买商业授权**（详见 [LICENSE](./LICENSE)）
 > 
 > 🏷️ **三级授权**：Community（免费演示）/ Pro（商业部署）/ Enterprise（白标+多租户）——功能分级见 `docs/TIER_GUIDE.md`
+> 
+> 💰 **购买商业授权**：Pro $2,990/年 · Enterprise $19,900/年 → [购买指南](docs/COMMERCIAL.md) · [协议模板](docs/COMMERCIAL_LICENSE_AGREEMENT.md) · 联系：GitHub [likenjoy](https://github.com/likenjoy)
 
 ![Gitee stars](https://gitee.com/likenjoy/likenjoy/badge/star.svg)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8)
