@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, DatePicker, Form, InputNumber, Modal, Select, Space, Table, Tag, Typography, message } from "antd";
+import { Button, Card, DatePicker, Form, InputNumber, Modal, Select, Space, Statistic, Table, Tag, Typography, message } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { api } from "@/lib/api";
 import dayjs from "dayjs";
@@ -35,6 +35,10 @@ const statusColors: Record<string, string> = {
 const typeLabels: Record<string, string> = {
   dividend: "分红",
   interest: "计息",
+};
+
+const statusLabels: Record<string, string> = {
+  active: "发放中", paused: "已暂停", completed: "已完成", cancelled: "已取消",
 };
 
 export default function DividendPage() {
@@ -102,13 +106,35 @@ export default function DividendPage() {
       title: "状态",
       dataIndex: "status",
       key: "status",
-      render: (s: string) => <Tag color={statusColors[s] || "default"}>{s}</Tag>,
+      render: (s: string) => <Tag color={statusColors[s] || "default"}>{statusLabels[s] || s}</Tag>,
     },
     { title: "开始日期", dataIndex: "start_date", key: "start_date" },
   ];
 
   return (
     <div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 16 }}>
+        <Card style={{ borderRadius: 12 }}>
+          <Statistic title="分红计划总数" value={plans.length} suffix="个" valueStyle={{ color: "#1AAB9B" }} />
+        </Card>
+        <Card style={{ borderRadius: 12 }}>
+          <Statistic
+            title="活跃计划"
+            value={plans.filter((p) => p.status === "active").length}
+            suffix="个"
+            valueStyle={{ color: "#16A34A" }}
+          />
+        </Card>
+        <Card style={{ borderRadius: 12 }}>
+          <Statistic
+            title="平均年化"
+            value={plans.length ? plans.reduce((s, p) => s + (p.rate || 0), 0) / plans.length * 100 : 0}
+            precision={2}
+            suffix="%"
+            valueStyle={{ color: "#FFC012" }}
+          />
+        </Card>
+      </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <Space>
           <Title level={4} style={{ margin: 0 }}>分红计息</Title>

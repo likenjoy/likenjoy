@@ -16,6 +16,7 @@ import (
 	"rwa-exchange/internal/kyc"
 	"rwa-exchange/internal/middleware"
 	"rwa-exchange/internal/redeem"
+	"rwa-exchange/internal/sysconfig"
 	"rwa-exchange/internal/relay"
 	"rwa-exchange/internal/revenue"
 	"rwa-exchange/internal/trade"
@@ -222,6 +223,12 @@ func main() {
 	adSvc := ad.NewService(adRepo)
 	adHandler := ad.NewHandler(adSvc)
 
+	// 系统配置（管理后台查看/更新 .env 配置，私钥脱敏不回显）
+	var sysHandler *sysconfig.Handler
+	if bcClient != nil {
+		sysHandler = sysconfig.NewHandler(bcClient.Signer().Address(), filepath.Join(cwd, ".env"))
+	}
+
 	// EIP-2771 元交易中继（平台代付 gas）
 	var relayHandler *relay.Handler
 	if bcClient != nil && contracts != nil {
@@ -374,6 +381,12 @@ func main() {
 		admin.GET("/revenue", revenueHandler.ListRevenue)
 		admin.GET("/gas", revenueHandler.ListGas)
 		admin.GET("/audit", revenueHandler.ListAudit)
+
+		// 系统配置（私钥脱敏，仅展示平台地址）
+		if sysHandler != nil {
+			admin.GET("/system", sysHandler.Get)
+			admin.PUT("/system", sysHandler.Update)
+		}
 
 		// 广告管理
 		admin.GET("/ads", adHandler.ListAdmin)

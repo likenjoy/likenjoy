@@ -56,7 +56,7 @@ function forgeJWT(payload, secret) {
     const r = await fetch(BASE + "/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "nobody" + i + "@test.com", password: "wrongpass" })
+      body: JSON.stringify({ email: "brute_victim@test.com", password: "wrongpass" })
     });
     if (r.status === 429 || r.status === 423) { got429 = true; break; }
   }

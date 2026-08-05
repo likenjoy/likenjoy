@@ -53,6 +53,7 @@ const menuItems = [
     label: "管理后台",
     children: [
       { key: "/admin/fees", icon: <SettingOutlined />, label: "费率与收入" },
+      { key: "/admin/system", icon: <SettingOutlined />, label: "系统设置" },
       { key: "/admin/ads", icon: <FundOutlined />, label: "广告管理" },
       { key: "/admin/investors", icon: <TeamOutlined />, label: "投资者管理" },
     ],
