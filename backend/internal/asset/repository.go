@@ -215,3 +215,34 @@ func (r *Repository) FindActiveRound(roundID uuid.UUID) (*IssuanceRound, error) 
 	}
 	return ir, nil
 }
+
+// RecordPrice 记录资产价格快照（曲线数据源）
+func (r *Repository) RecordPrice(assetID uuid.UUID, price string) error {
+	_, err := r.db.Exec(`INSERT INTO asset_price_history (id, asset_id, price) VALUES (?, ?, ?)`,
+		uuid.NewString(), assetID.String(), price)
+	return err
+}
+
+// PriceHistory 返回资产价格历史（按时间正序，最近 N 条）
+func (r *Repository) PriceHistory(assetID uuid.UUID, limit int) ([]PricePoint, error) {
+	if limit <= 0 || limit > 365 {
+		limit = 90
+	}
+	rows, err := r.db.Query(
+		`SELECT price, recorded_at FROM asset_price_history WHERE asset_id = ? ORDER BY recorded_at ASC LIMIT ?`,
+		assetID.String(), limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []PricePoint
+	for rows.Next() {
+		var p PricePoint
+		if err := rows.Scan(&p.Price, &p.Date); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}

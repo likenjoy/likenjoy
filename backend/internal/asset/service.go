@@ -172,3 +172,13 @@ func (s *Service) AddDocument(assetID uuid.UUID, docType, fileName, fileHash, fi
 func (s *Service) GetRounds(assetID uuid.UUID) ([]IssuanceRound, error) {
 	return s.repo.FindRounds(assetID)
 }
+
+// PriceHistory 资产价格历史（曲线数据源）
+func (s *Service) PriceHistory(assetID uuid.UUID, limit int) ([]PricePoint, error) {
+	return s.repo.PriceHistory(assetID, limit)
+}
+
+// RecordPrice 记录价格快照
+func (s *Service) RecordPrice(assetID uuid.UUID, price string) error {
+	return s.repo.RecordPrice(assetID, price)
+}

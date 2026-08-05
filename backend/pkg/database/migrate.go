@@ -296,6 +296,13 @@ func MigrateSQLite(db *sql.DB) error {
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_accreditation_user ON accreditation_checks(user_id)`,
+		`CREATE TABLE IF NOT EXISTS asset_price_history (
+			id TEXT PRIMARY KEY,
+			asset_id TEXT NOT NULL,
+			price TEXT NOT NULL DEFAULT '0',
+			recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (asset_id) REFERENCES assets(id)
+		)`,
 		`CREATE TABLE IF NOT EXISTS advertisements (
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,

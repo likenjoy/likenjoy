@@ -100,6 +100,10 @@ func (h *Handler) CreateAsset(c *gin.Context) {
 		}
 	}
 
+	// 记录初始价格快照（收益曲线数据源）
+	if herr := h.svc.RecordPrice(asset.ID, asset.PricePerUnit); herr != nil {
+		log.Printf("[CreateAsset] record price: %v", herr)
+	}
 	c.JSON(http.StatusCreated, gin.H{
 		"id":               asset.ID,
 		"issuer_id":        asset.IssuerID,
@@ -448,4 +452,19 @@ func (h *Handler) GetRounds(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, rounds)
+}
+
+// GetPriceHistory GET /api/assets/:id/history 资产价格历史（收益曲线数据源）
+func (h *Handler) GetPriceHistory(c *gin.Context) {
+	assetID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid asset id"})
+		return
+	}
+	points, err := h.svc.PriceHistory(assetID, 90)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": points})
 }

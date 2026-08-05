@@ -6,6 +6,7 @@ import { Card, Descriptions, Tag, Table, Space, Button, Typography, message, Ale
 import { CopyOutlined, SafetyCertificateOutlined, LinkOutlined } from "@ant-design/icons";
 import { api } from "@/lib/api";
 import PerformanceChart from "@/components/PerformanceChart";
+import PriceHistoryChart, { type PricePoint } from "@/components/PriceHistoryChart";
 
 const { Title, Text } = Typography;
 
@@ -42,6 +43,7 @@ export default function AssetDetailPage() {
   const [asset, setAsset] = useState<Asset | null>(null);
   const [plans, setPlans] = useState<DividendPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historyData, setHistoryData] = useState<PricePoint[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -50,6 +52,11 @@ export default function AssetDetailPage() {
     api.get<DividendPlan[]>(`/assets/${id}/dividends/plans`)
       .then(setPlans).catch(() => setPlans([]))
       .finally(() => setLoading(false));
+
+    // 拉取真实价格历史（收益曲线）
+    api.get<{ data: { price: string; date: string }[] }>(`/assets/${id}/history`)
+      .then((r) => setHistoryData((r.data || []).map((p) => ({ date: p.date, price: Number(p.price) }))))
+      .catch(() => setHistoryData([]));
   }, [id]);
 
   if (!asset) return <Card loading={loading} />;

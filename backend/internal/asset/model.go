@@ -78,3 +78,9 @@ type IssuanceRound struct {
 	Status       string    `json:"status" gorm:"default:'upcoming'"` // upcoming, active, closed, settled
 	CreatedAt    time.Time `json:"created_at"`
 }
+
+// PricePoint 资产价格历史点
+type PricePoint struct {
+	Price string `json:"price"`
+	Date  string `json:"date"`
+}
