@@ -359,6 +359,9 @@ api.GET("/health", func(c *gin.Context) {
 		protected.GET("/assets/:id/rounds", assetHandler.GetRounds)
 
 		protected.POST("/trades/orders", tradeHandler.PlaceOrder)
+		protected.POST("/trades/epochs", tradeHandler.CreateEpochHandler)
+		protected.POST("/trades/epochs/:id/close", tradeHandler.CloseEpochHandler)
+		protected.GET("/trades/epochs", tradeHandler.ListEpochsHandler)
 		protected.GET("/trades/orders/:id", tradeHandler.GetOrder)
 		protected.GET("/trades/orders", tradeHandler.ListUserOrders)
 		protected.POST("/trades/orders/:id/cancel", tradeHandler.CancelOrder)

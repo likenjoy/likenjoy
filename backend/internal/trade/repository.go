@@ -176,3 +176,64 @@ func (r *Repository) IsWhitelisted(assetID, userID uuid.UUID) (bool, error) {
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM trade_whitelist WHERE asset_id=$1 AND user_id=$2`, assetID, userID).Scan(&count)
 	return count > 0, err
 }
+
+
+// ========== Epoch ==========
+
+func (r *Repository) CreateEpoch(e *Epoch) error {
+	_, err := r.db.Exec(`INSERT INTO epochs (id, asset_id, status, created_by) VALUES (?, ?, ?, ?)`, e.ID, e.AssetID.String(), e.Status, e.CreatedBy)
+	return err
+}
+
+func (r *Repository) FindEpochByID(id uuid.UUID) (*Epoch, error) {
+	row := r.db.QueryRow(`SELECT id, asset_id, status, created_by, created_at, closed_at FROM epochs WHERE id = ?`, id.String())
+	var e Epoch
+	var createdAt string
+	if err := row.Scan(&e.ID, &e.AssetID, &e.Status, &e.CreatedBy, &createdAt, &e.ClosedAt); err != nil {
+		return nil, err
+	}
+	e.CreatedAt = createdAt
+	return &e, nil
+}
+
+func (r *Repository) CloseEpoch(id uuid.UUID) error {
+	_, err := r.db.Exec(`UPDATE epochs SET status='closed', closed_at=CURRENT_TIMESTAMP WHERE id=?`, id.String())
+	return err
+}
+
+func (r *Repository) ListEpochsByAsset(assetID uuid.UUID) ([]Epoch, error) {
+	rows, err := r.db.Query(`SELECT id, asset_id, status, created_by, created_at, closed_at FROM epochs WHERE asset_id=? ORDER BY created_at DESC LIMIT 20`, assetID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Epoch
+	for rows.Next() {
+		var e Epoch
+		var createdAt string
+		if err := rows.Scan(&e.ID, &e.AssetID, &e.Status, &e.CreatedBy, &createdAt, &e.ClosedAt); err != nil {
+			return nil, err
+		}
+		e.CreatedAt = createdAt
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// FindPendingBuyOrdersByAsset 资产下所有未成交买单（按创建时间）
+func (r *Repository) FindPendingBuyOrdersByAsset(assetID uuid.UUID) ([]Order, error) {
+	rows, err := r.db.Query(`SELECT * FROM trade_orders WHERE asset_id=? AND side='buy' AND status IN ('pending','partial') ORDER BY created_at ASC`, assetID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Order
+	for rows.Next() {
+		var o Order
+		if err := rows.Scan(&o.ID, &o.AssetID, &o.RoundID, &o.UserID, &o.Side, &o.OrderType, &o.Price, &o.Quantity, &o.FilledQty, &o.Status, &o.ExpiresAt, &o.CreatedAt, &o.EpochID); err != nil {
+			return nil, err
+		}
+		out = append(out, o)
+	}
+	return out, rows.Err()
+}

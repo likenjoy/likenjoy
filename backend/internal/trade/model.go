@@ -57,6 +57,7 @@ type Order struct {
 	TotalAmount string      `json:"total_amount" gorm:"type:numeric(36,6)"` // quantity * price
 	Status      OrderStatus `json:"status" gorm:"default:'pending'"`
 	ExpiresAt   *time.Time  `json:"expires_at"`
+	EpochID    string    `json:"epoch_id"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
 }
@@ -99,4 +100,15 @@ type WhitelistEntry struct {
 	AddedBy   uuid.UUID `json:"added_by" gorm:"type:uuid;not null"`
 	ExpiresAt *time.Time `json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+
+// Epoch 结算周期（两阶段：订单收集 → 批量结算）
+type Epoch struct {
+	ID        string    `json:"id"`
+	AssetID   uuid.UUID `json:"asset_id"`
+	Status    string    `json:"status"` // open / closed
+	CreatedBy string    `json:"created_by"`
+	CreatedAt string    `json:"created_at"`
+	ClosedAt  string    `json:"closed_at"`
 }

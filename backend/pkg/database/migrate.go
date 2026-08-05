@@ -296,6 +296,16 @@ func MigrateSQLite(db *sql.DB) error {
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_accreditation_user ON accreditation_checks(user_id)`,
+
+		`CREATE TABLE IF NOT EXISTS epochs (
+			id TEXT PRIMARY KEY,
+			asset_id TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'open',
+			created_by TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			closed_at DATETIME NOT NULL DEFAULT '',
+			FOREIGN KEY (asset_id) REFERENCES assets(id)
+		)`,
 		`CREATE TABLE IF NOT EXISTS asset_price_history (
 			id TEXT PRIMARY KEY,
 			asset_id TEXT NOT NULL,
@@ -370,6 +380,27 @@ func MigrateSQLite(db *sql.DB) error {
 	for _, stmt := range statements {
 		if _, err := db.Exec(stmt); err != nil {
 			return err
+		}
+	}
+
+
+	// 兼容旧库：trade_orders 补充 epoch_id 列
+	if rows3, e3 := db.Query(`PRAGMA table_info(trade_orders)`); e3 == nil {
+		hasEpoch := false
+		for rows3.Next() {
+			var cid int
+			var name, ctype string
+			var notnull, pk int
+			var dflt interface{}
+			if rows3.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk) == nil && name == "epoch_id" {
+				hasEpoch = true
+			}
+		}
+		rows3.Close()
+		if !hasEpoch {
+			if _, e4 := db.Exec(`ALTER TABLE trade_orders ADD COLUMN epoch_id TEXT DEFAULT ''`); e4 != nil {
+				log.Printf("WARNING: add trade_orders epoch_id column: %v", e4)
+			}
 		}
 	}
 
