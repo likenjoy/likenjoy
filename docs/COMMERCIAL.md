@@ -29,9 +29,18 @@
 
 - **GitHub**：https://github.com/likenjoy（Issues/邮件）
 - **Gitee**：https://gitee.com/likenjoy（私信）
-- **支付地址**（USDT/USDC，ERC-20）：请联系授权方获取最新地址（链上支付前务必核对，谨防钓鱼）
+- **收款地址**（USDT/USDC 稳定币）：
 
-> ⚠️ 支付地址每次购买单独提供，不在公开页面写死——防止地址被篡改/冒用。
+```
+ETH（ERC-20）：0xc71c96adcc0ef1da8ead8e5224bbbe23d25d2a05
+BNB（BEP-20）：0xc71c96adcc0ef1da8ead8e5224bbbe23d25d2a05
+```
+
+> ⚠️ **支付安全须知**：
+> 1. 仅接受 **USDT / USDC 稳定币**（不支持原生 ETH/BNB 转账作为授权费）
+> 2. 转账前**务必核对地址**：前 4 位 `0xc71c` + 后 4 位 `2a05`，防止钓鱼/篡改
+> 3. 确认到账后（3 个工作日内）交付授权证书
+> 4. 任何"要求转账到其他地址"的消息均为诈骗
 
 ## 📜 授权流程说明
 
