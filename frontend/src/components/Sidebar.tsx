@@ -23,10 +23,6 @@ const { Sider } = Layout;
 
 // 分组导航（参考 ant-design-pro 后台范式：按业务域分组）
 
-  const [licenseTier, setLicenseTier] = useState<string>("pro");
-  useEffect(() => {
-    fetch("/api/license").then(r => r.json()).then(d => setLicenseTier(d.tier || "pro")).catch(() => {});
-  }, []);
 const menuItems: any[] = [
   {
     type: "group" as const,
@@ -71,6 +67,10 @@ export default function Sidebar() {
   const { theme } = useAppTheme();
   const layoutColors = theme.layoutColors;
   const DARK_BG = layoutColors.sidebarBg;
+  const [licenseTier, setLicenseTier] = useState<string>("pro");
+  useEffect(() => {
+    fetch("/api/license").then(r => r.json()).then(d => setLicenseTier(d.tier || "pro")).catch(() => {});
+  }, []);
 
   // 选中态：/assets/xxx 也高亮 /assets
   
