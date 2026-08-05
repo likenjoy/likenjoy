@@ -282,7 +282,15 @@ func main() {
 	api.GET("/ads", adHandler.ListPublic)
 
 	// 健康检查（监控告警用：服务 + 链连接状态）
-	api.GET("/health", func(c *gin.Context) {
+			// 法币入金通道状态（Transak；启用需配置 TRANSAK_API_KEY）
+		api.GET("/config/onramp", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"enabled":  os.Getenv("TRANSAK_API_KEY") != "",
+				"provider": "transak",
+			})
+		})
+
+api.GET("/health", func(c *gin.Context) {
 		status := "ok"
 		chainStatus := "unknown"
 		if bcClient != nil {

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: 后端编译
+        run: cd backend && go build ./...
+      - name: 后端单元测试
+        run: cd backend && go vet ./... && go test ./... 2>&1 | tail -5
+
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 安装依赖
+        run: cd contracts/erc3643 && npm ci
+      - name: 合约编译
+        run: cd contracts/erc3643 && npx hardhat compile
+      - name: 合约测试
+        run: cd contracts/erc3643 && npx hardhat test
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 安装依赖
+        run: cd frontend && npm ci
+      - name: 类型检查
+        run: cd frontend && npx tsc --noEmit 2>&1 | tail -10
+      - name: 构建
+        run: cd frontend && npm run build
+        env:
+          NEXT_PUBLIC_API_BASE: ${{ secrets.NEXT_PUBLIC_API_BASE }}

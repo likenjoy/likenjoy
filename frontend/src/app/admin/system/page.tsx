@@ -20,6 +20,7 @@ export default function AdminSystemPage() {
   const [cfg, setCfg] = useState<SystemConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [onrampEnabled, setOnrampEnabled] = useState<boolean | null>(null);
   const [form] = Form.useForm();
 
   const load = useCallback(() => {
@@ -31,6 +32,13 @@ export default function AdminSystemPage() {
   }, [form]);
 
   useEffect(load, [load]);
+
+  // 法币入金通道状态
+  useEffect(() => {
+    api.get<{ enabled: boolean }>("/config/onramp")
+      .then((d) => setOnrampEnabled(d.enabled))
+      .catch(() => setOnrampEnabled(null));
+  }, []);
 
   const handleSave = async () => {
     const values = await form.validateFields();
@@ -98,6 +106,20 @@ export default function AdminSystemPage() {
             </Space>
           </Descriptions.Item>
         </Descriptions>
+      </Card>
+
+      <Card title={<Space><GlobalOutlined style={{ color: "#1AAB9B" }} />法币入金通道</Space>} loading={loading}>
+        <Space direction="vertical" size={8}>
+          <Space>
+            <Tag color={onrampEnabled ? "green" : "default"}>{onrampEnabled ? "已启用" : "未启用"}</Tag>
+            <Text strong>Transak（支持 HKD）</Text>
+          </Space>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            {onrampEnabled
+              ? "法币入金已启用：用户可通过信用卡/银行转账购买稳定币后认购资产。"
+              : "未配置 TRANSAK_API_KEY。获取 API Key 后在服务器 .env 添加 TRANSAK_API_KEY=xxx 并重启后端即可启用。"}
+          </Text>
+        </Space>
       </Card>
 
       <Card title={<Space><KeyOutlined style={{ color: "#FFC012" }} />密钥维护（高危操作）</Space>}>
