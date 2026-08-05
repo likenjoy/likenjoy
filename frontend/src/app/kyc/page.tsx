@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Descriptions, Form, Input, Select, Steps, Tag, Typography, Upload, message } from "antd";
+import { Button, Card, Descriptions, Form, Input, Select, Steps, Tag, Typography, Upload, message, Result, Alert } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { api } from "@/lib/api";
 
@@ -107,9 +107,27 @@ export default function KYCPage() {
       <Card style={{ marginBottom: 24 }}>
         <Steps current={getStepCurrent()} items={steps} />
       </Card>
-      {submission ? (
+      {submission && submission.status === "approved" ? (
+        <Card style={{ marginBottom: 24 }}>
+          <Result
+            status="success"
+            title="KYC 认证已通过"
+            subTitle="您已完成合规身份认证，可参与平台全部资产认购与交易。链上身份已注册并加入白名单。"
+          />
+        </Card>
+      ) : submission ? (
         <Card loading={loading}>
           <Descriptions title="认证信息" column={2}>
+            {submission.status === "pending" && (
+              <Descriptions.Item label="审核提示" span={2}>
+                <Alert type="info" showIcon message="资料审核中，通常 1-3 个工作日完成。审核通过后链上身份将自动注册。" style={{ borderRadius: 8 }} />
+              </Descriptions.Item>
+            )}
+            {submission.status === "rejected" && (
+              <Descriptions.Item label="拒绝提示" span={2}>
+                <Alert type="error" showIcon message="认证被拒绝，请核对资料后重新提交。如有疑问请联系客服。" style={{ borderRadius: 8 }} />
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="用户ID">{submission.user_id}</Descriptions.Item>
             <Descriptions.Item label="状态">
               <Tag color={statusColors[submission.status]}>{statusLabels[submission.status] || submission.status}</Tag>

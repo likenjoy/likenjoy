@@ -281,6 +281,21 @@ func main() {
 	// 广告公开查询（Landing 展示，无需登录）
 	api.GET("/ads", adHandler.ListPublic)
 
+	// 健康检查（监控告警用：服务 + 链连接状态）
+	api.GET("/health", func(c *gin.Context) {
+		status := "ok"
+		chainStatus := "unknown"
+		if bcClient != nil {
+			if err := bcClient.Ping(c.Request.Context()); err != nil {
+				chainStatus = "error: " + err.Error()
+				status = "degraded"
+			} else {
+				chainStatus = "connected"
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"status": status, "chain": chainStatus, "contracts_loaded": contracts != nil})
+	})
+
 	auth := api.Group("/auth")
 	auth.Use(middleware.RateLimitMiddleware(loginLimiter))
 	{

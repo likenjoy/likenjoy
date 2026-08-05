@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, Form, InputNumber, Input, Button, Table, Tabs, Tag, message, Typography, Alert, Space } from "antd";
+import { Card, Form, InputNumber, Input, Button, Table, Tabs, Tag, message, Typography, Alert, Space, Statistic, Row, Col } from "antd";
 import { api } from "@/lib/api";
 
 const { Title, Text } = Typography;
