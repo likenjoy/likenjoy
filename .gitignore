@@ -34,3 +34,7 @@ contracts/erc3643/typechain-types/
 # 系统
 .DS_Store
 Thumbs.db
+
+gen_keys_output.txt
+
+backup/
