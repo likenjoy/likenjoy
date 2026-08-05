@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Layout, Menu } from "antd";
 import {
@@ -21,14 +22,19 @@ import { useAppTheme } from "@/components/ThemeProvider";
 const { Sider } = Layout;
 
 // 分组导航（参考 ant-design-pro 后台范式：按业务域分组）
-const menuItems = [
+
+  const [licenseTier, setLicenseTier] = useState<string>("pro");
+  useEffect(() => {
+    fetch("/api/license").then(r => r.json()).then(d => setLicenseTier(d.tier || "pro")).catch(() => {});
+  }, []);
+const menuItems: any[] = [
   {
     type: "group" as const,
     label: "投资中心",
     children: [
       { key: "/dashboard", icon: <DashboardOutlined />, label: "仪表盘" },
       { key: "/assets", icon: <GoldOutlined />, label: "资产" },
-      { key: "/trade", icon: <SwapOutlined />, label: "交易" },
+      { key: "/trade", icon: <SwapOutlined />, label: "交易", tier: "pro" },
     ],
   },
   {
@@ -36,8 +42,8 @@ const menuItems = [
     label: "我的资产",
     children: [
       { key: "/portfolio", icon: <WalletOutlined />, label: "持仓与转账" },
-      { key: "/dividend", icon: <DollarOutlined />, label: "分红" },
-      { key: "/redeem", icon: <RollbackOutlined />, label: "赎回" },
+      { key: "/dividend", icon: <DollarOutlined />, label: "分红", tier: "pro" },
+      { key: "/redeem", icon: <RollbackOutlined />, label: "赎回", tier: "pro" },
     ],
   },
   {
@@ -50,7 +56,7 @@ const menuItems = [
   },
   {
     type: "group" as const,
-    label: "管理后台",
+    label: "管理后台", tier: "pro",
     children: [
       { key: "/admin/fees", icon: <SettingOutlined />, label: "费率与收入" },
       { key: "/admin/system", icon: <SettingOutlined />, label: "系统设置" },
@@ -67,7 +73,19 @@ export default function Sidebar() {
   const DARK_BG = layoutColors.sidebarBg;
 
   // 选中态：/assets/xxx 也高亮 /assets
-  const selectedKey = menuItems
+  
+  const visibleItems: any[] = menuItems
+    .map((g) => {
+      const group = g as { label: string; tier?: string; children?: { key: string; tier?: string }[] };
+      if (group.children) {
+        const kids = group.children.filter((i) => !i.tier || i.tier === "enterprise" || licenseTier === "pro" || licenseTier === "enterprise" || i.tier === licenseTier);
+        return { ...group, children: kids };
+      }
+      return group;
+    })
+    .filter((g) => !(g as { tier?: string }).tier || (g as { tier?: string }).tier === "enterprise" || licenseTier === "pro" || licenseTier === "enterprise" || (g as { tier?: string }).tier === licenseTier);
+
+const selectedKey = visibleItems
     .flatMap((g) => (g as { children: { key: string }[] }).children)
     .map((i) => i.key)
     .filter((k) => pathname.startsWith(k))
@@ -91,7 +109,7 @@ export default function Sidebar() {
         mode="inline"
         theme={layoutColors.menuTheme}
         selectedKeys={[selectedKey]}
-        items={menuItems}
+        items={visibleItems}
         onClick={({ key }) => router.push(key)}
         style={{
           background: "transparent",

@@ -20,6 +20,7 @@ import (
 	"rwa-exchange/internal/relay"
 	"rwa-exchange/internal/revenue"
 	"rwa-exchange/internal/trade"
+	"rwa-exchange/internal/license"
 	"rwa-exchange/internal/user"
 	"rwa-exchange/pkg/compliance"
 	"rwa-exchange/pkg/database"
@@ -290,7 +291,8 @@ func main() {
 			})
 		})
 
-api.GET("/health", func(c *gin.Context) {
+api.GET("/license", license.Handler)
+	api.GET("/health", func(c *gin.Context) {
 		status := "ok"
 		chainStatus := "unknown"
 		if bcClient != nil {
@@ -358,15 +360,16 @@ api.GET("/health", func(c *gin.Context) {
 		protected.POST("/assets/:id/documents", middleware.RoleMiddleware("issuer", "admin"), assetHandler.AddDocument)
 		protected.GET("/assets/:id/rounds", assetHandler.GetRounds)
 
-		protected.POST("/trades/orders", tradeHandler.PlaceOrder)
-		protected.POST("/trades/epochs", tradeHandler.CreateEpochHandler)
-		protected.POST("/trades/epochs/:id/close", tradeHandler.CloseEpochHandler)
-		protected.GET("/trades/epochs", tradeHandler.ListEpochsHandler)
-		protected.GET("/trades/orders/:id", tradeHandler.GetOrder)
-		protected.GET("/trades/orders", tradeHandler.ListUserOrders)
-		protected.POST("/trades/orders/:id/cancel", tradeHandler.CancelOrder)
-		protected.GET("/trades/asset/:id", tradeHandler.ListAssetTrades)
-		protected.GET("/trades/history", tradeHandler.ListUserTrades)
+		tradesGrp := protected.Group("/trades", license.RequireFeature(license.FeatureTrading))
+	tradesGrp.POST("orders", tradeHandler.PlaceOrder)
+		tradesGrp.POST("epochs", tradeHandler.CreateEpochHandler)
+		tradesGrp.POST("epochs/:id/close", tradeHandler.CloseEpochHandler)
+		tradesGrp.GET("epochs", tradeHandler.ListEpochsHandler)
+		tradesGrp.GET("orders/:id", tradeHandler.GetOrder)
+		tradesGrp.GET("orders", tradeHandler.ListUserOrders)
+		tradesGrp.POST("orders/:id/cancel", tradeHandler.CancelOrder)
+		tradesGrp.GET("asset/:id", tradeHandler.ListAssetTrades)
+		tradesGrp.GET("history", tradeHandler.ListUserTrades)
 
 		protected.POST("/assets/:id/dividends/plans", middleware.RoleMiddleware("issuer", "admin"), dividendHandler.CreatePlan)
 		protected.GET("/assets/:id/dividends/plans", dividendHandler.GetPlansByAsset)

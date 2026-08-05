@@ -2,6 +2,10 @@
 
 基于 **ERC-3643（T-REX 合规代币标准）** 的 RWA 全栈平台：资产代币化 → KYC/AML 合规 → 私募交易 → 分红/赎回 → 平台收入管理。
 
+> ⚖️ **许可证**：PolyForm Noncommercial 1.0.0 —— **非商业用途免费；商业用途（部署运营/SaaS/白标）需购买商业授权**（详见 [LICENSE](./LICENSE)）
+> 
+> 🏷️ **三级授权**：Community（免费演示）/ Pro（商业部署）/ Enterprise（白标+多租户）——功能分级见 `docs/TIER_GUIDE.md`
+
 ![Gitee stars](https://gitee.com/likenjoy/likenjoy/badge/star.svg)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8)
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636)
