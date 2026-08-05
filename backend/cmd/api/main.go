@@ -425,8 +425,8 @@ api.GET("/health", func(c *gin.Context) {
 	if port == "" {
 		port = "8080"
 	}
-	log.Printf("RWA Exchange API starting on :%s", port)
-	if err := r.Run(":" + port); err != nil {
+	log.Printf("RWA Exchange API starting on 127.0.0.1:%s", port)
+	if err := r.Run("127.0.0.1:" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
