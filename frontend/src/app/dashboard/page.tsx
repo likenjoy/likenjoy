@@ -8,6 +8,7 @@ import {
 } from "@ant-design/icons";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import PriceHistoryChart from "@/components/PriceHistoryChart";
 
 const { Title, Text } = Typography;
 
@@ -37,6 +38,7 @@ const quickActions = [
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({ total_assets: 0, total_trades: 0, total_dividends: 0, total_users: 0 });
   const [recentTrades, setRecentTrades] = useState<RecentTrade[]>([]);
+  const [trendData, setTrendData] = useState<{ date: string; price: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -124,6 +126,13 @@ export default function DashboardPage() {
             </Col>
           ))}
         </Row>
+
+        {/* 资产净值趋势 */}
+        {trendData.length >= 2 && (
+          <Card title={<Space><GoldOutlined style={{ color: "#1AAB9B" }} />资产净值趋势</Space>} style={{ borderRadius: 12 }}>
+            <PriceHistoryChart data={trendData} height={200} />
+          </Card>
+        )}
 
         {/* 最近交易 */}
         <Card
