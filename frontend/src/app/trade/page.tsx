@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button, Card, Form, InputNumber, Select, Space, Table, Tag, Typography, message, Segmented, Alert } from "antd";
 import { SwapOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { api } from "@/lib/api";
+import EpochPanel from "@/components/EpochPanel";
 
 const { Title, Text } = Typography;
 
@@ -175,6 +176,9 @@ export default function TradePage() {
             </Button>
           </Space>
         </Card>
+
+        {/* 结算周期（Epoch 两阶段结算） */}
+        <EpochPanel assetId={assetId} />
 
         {/* 右侧：订单列表 */}
         <Card
